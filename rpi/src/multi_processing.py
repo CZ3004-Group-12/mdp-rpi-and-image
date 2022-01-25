@@ -1,10 +1,6 @@
-from email.policy import default
-from this import d
 import cv2
 import time
 import imagezmq
-from RPI.src.algorithm import Algorithm
-
 from misc.config import *
 from misc.protocols import *
 from picamera import PiCamera
@@ -13,8 +9,8 @@ from picamera.array import PiRGBArray
 from datetime import datetime
 from multiprocessing import Process, Value, Queue, Manager
 
-from android import Android
-from algorithm import Algorithm
+from .android import Android
+from .algorithm import Algorithm
 
 class MultiProcessing:
     """

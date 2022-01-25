@@ -5,6 +5,7 @@ via the server/client.
 '''
 
 # Bluetooth Status
+import os
 from bluetooth import *
 from misc.status import *
 from misc.config import ANDROID_SOCKET_BUFFER_SIZE, RFCOMM_CHANNEL, UUID
@@ -17,9 +18,11 @@ class Android:
         print("[Initilise] Android Process")
         self.server_socket = None
         self.client_socket = None
+        os.system("sudo hciconfig hci0 piscan")
         self.server_socket = BluetoothSocket(RFCOMM)
-        self.server_socket.bind(("", RFCOMM_CHANNEL))
-        self.server_socket.listen(RFCOMM_CHANNEL)
+        self.server_socket.bind(("", PORT_ANY))
+        self.server_socket.listen(1)
+        self.port = self.server_socket.getsockname()[1]
         advertise_service(
             self.server_socket, 
             'MDP_Group_12',
@@ -34,7 +37,7 @@ class Android:
         retry = True
         while retry:
             try:
-                print(f"{BT_LISTENING} Listening on RFCOMM channel: {RFCOMM_CHANNEL}...")
+                print(f"{BT_LISTENING} Listening on RFCOMM channel: {self.port}...")
                 if self.client_socket == None:
                     self.client_socket, client_addr = self.server_socket.accept()
                     print(f"{BT_CLIENT_CONNECTED} Bluetooth established connection at address: {str(client_addr)}")
