@@ -1,0 +1,101 @@
+'''
+Rapsberry Pi serves as socket server, N7 will need a client socket script
+as well to establish connection. Should be able to send and receive messages
+via the server/client.
+'''
+
+# Bluetooth Status
+from bluetooth import *
+from misc.status import *
+from misc.config import ANDROID_SOCKET_BUFFER_SIZE, RFCOMM_CHANNEL, UUID
+
+# UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
+# 00001108-0000-1000-8000-00805f9b34fb
+
+class Android:
+    def __init__(self) -> None:
+        print("[Initilise] Android Process")
+        self.server_socket = None
+        self.client_socket = None
+        self.server_socket = BluetoothSocket(RFCOMM)
+        self.server_socket.bind(("", RFCOMM_CHANNEL))
+        self.server_socket.listen(RFCOMM_CHANNEL)
+        advertise_service(
+            self.server_socket, 
+            'MDP_Group_12',
+            service_id=UUID,
+            service_classes=[UUID, SERIAL_PORT_CLASS],
+            profiles=[SERIAL_PORT_PROFILE],
+            protocols = [ OBEX_UUID ]
+        )
+        print('server socket:', str(self.server_socket))
+    
+    def connect(self) -> None:
+        retry = True
+        while retry:
+            try:
+                print(f"{BT_LISTENING} Listening on RFCOMM channel: {RFCOMM_CHANNEL}...")
+                if self.client_socket == None:
+                    self.client_socket, client_addr = self.server_socket.accept()
+                    print(f"{BT_CLIENT_CONNECTED} Bluetooth established connection at address: {str(client_addr)}")
+                    retry = False
+            except Exception as error:
+                print(f"{BT_ERROR} Fail to establish Bluetooth Connection: {str(error)}")
+                self.disconnect_client()
+                retry = True
+            print(f"{BT_RECONNECTION} Retrying Bluetooth Connection...")
+
+    def disconnect_client(self) -> None:
+        try:
+            if self.client_socket != None:
+                self.client_socket.close()
+                self.client_socket = None
+        except Exception as error:	
+            print(f"{BT_ERROR} Fail to disconnect Client Socket: {str(error)}")
+
+    def disconnect_server(self) -> None:
+        try:
+            if self.server_socket != None:
+                self.server_socket.close()
+                self.server_socket = None
+        except Exception as error:	
+            print(f"{BT_ERROR} Fail to disconnect Server Socket: {str(error)}")
+
+    def disconnect_all(self) -> None:
+        self.disconnect_client()
+        self.disconnect_server()
+
+    def read(self) -> None:
+        try:
+            message = self.client_socket.recv(ANDROID_SOCKET_BUFFER_SIZE).strip()
+            print(f'[FROM ANDROID] {message}')
+            if message is None:
+                return None
+            if len(message) > 0:
+                return message
+            return None
+            
+        except Exception as error:
+            print(f"{BT_ERROR} Fail to read {str(error)}")
+            raise error
+      
+    def write(self, message) -> None:
+        try:
+            print(f'[TO ANDROID] {message}')
+            self.client_socket.send(message)
+
+        except Exception as error:	
+            print(f"{BT_ERROR}  Fail to write {str(error)}")
+            raise error
+
+
+# Standalone testing.
+if __name__ == '__main__':
+    android = Android()
+    android.connect()
+    try:
+        while True:
+            android.read()
+            android.write(input(f"{BT_TEST} Send Message: "))
+    except KeyboardInterrupt:
+        print("Terminating the program now...")    
