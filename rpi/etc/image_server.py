@@ -18,21 +18,21 @@ class ImageProcessingServer:
     def __init__(self):
 
         # initialize the ImageHub object
-        self.image_hub = CustomImageHub(open_port=f"tcp://:{IMAGE_SERVER_PORT}")
+        self.image_hub = CustomImageHub()
         
     def start(self):
 
-        print('\nStarted image processing server.\n')
+        print('[Image Server] Started image processing server')
         
         while True:
             try:
-                print('Waiting for image from RPi...')
+                print('[Image Server] Waiting for image from RPi')
 
                 # receive RPi name and frame from the RPi and acknowledge the receipt
                 _, frame = self.image_hub.recv_image()
-                print('Connected and received frame at time: ' + str(datetime.now()))
+                print('[Image Server] Connected and received frame at time: ' + str(datetime.now()))
                 # form image file path for saving
-                raw_image_name = "Test RPI Image " + str(datetime.now())
+                raw_image_name = "Test RPI Image " + str(datetime.now()) + ".jpg"
                 dir_path = os.path.dirname(os.path.realpath(__file__))
                 raw_image_path = os.path.join(dir_path, raw_image_name)
                 
@@ -41,17 +41,18 @@ class ImageProcessingServer:
                 break
 
             except KeyboardInterrupt as e:
-                print("Ctrl-C")
+                print("[Image Server] Ctrl-C")
+                break
         self.end()
 
     def end(self):
-        print('Stopping image processing server')
+        print('[Image Server] Stopping image processing server')
         self.image_hub.send_reply('Done')
         # send_reply disconnects the connection
-        print('Sent reply and disconnected at time: ' + str(datetime.now()) + '\n')
+        print('[Image Server] Sent reply and disconnected at time: ' + str(datetime.now()) + '\n')
 
 # Standalone testing.
 if __name__ == '__main__':
-    print("[Starting up Image Server]")
+    print("[Image Server] Starting up Image Server")
     image_hub = ImageProcessingServer()
     image_hub.start()

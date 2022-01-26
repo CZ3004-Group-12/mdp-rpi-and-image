@@ -28,7 +28,7 @@ class MultiProcessing:
         Also instantiates the queues required for multiprocessing.
         """
 
-        print("[Main] - __init__ Multi Processing Communication")
+        print("[Main] Initialising Multi Processing Communication")
         self.manager = Manager()
         self.android = Android()
         self.algorithm = Algorithm()
@@ -37,12 +37,17 @@ class MultiProcessing:
         self.to_android_message_queue = self.manager.Queue()
         self.to_stm_message_queue = self.manager.Queue()
         
+        self.image_process = None
+        self.write_process = Process(target=self.write_to_target, name="[Write to Target Process]")
         self.read_from_android_process = Process(target=self.read_from_android, name="[Read Android Process]")
         self.write_to_android_process = Process(target=self.write_to_android, name="[Write Android Process]")
+        self.read_from_algorithm_process = Process(target=self.read_from_algorithm, name="[Read Algorithm Process]")
 
         self.process_list = [
             self.read_from_android_process, 
-            self.write_to_android_process
+            self.read_from_algorithm_process,
+            self.write_to_android_process,
+            self.write_process,
         ]
 
         if image_processing_sever_url is not None:
@@ -50,23 +55,24 @@ class MultiProcessing:
             self.image_queue = self.manager.Queue()
             self.image_processing_server = image_processing_sever_url
             self.image_process = Process(target=self.image_processing, name="[Image Process]")
-            self.process_list.append(self.image_process)
     
     def start(self) -> None:
         try:
             # Android Process
             self.android.connect()
-            print("[Main] - Established connection with Android.")
+            print("[Main] Established connection with Android.")
             
             # Algorithm Process
             self.algorithm.connect()
-            print("[Main] - Established connection with Algorithm.")
+            print("[Main] Established connection with Algorithm.")
             
             for process in self.process_list:
                 process.start()
                 print(f"{process.name} has started.")
-         
-            print('[200] - Multi Processing has been started.')
+            if self.image_process is not None:
+                self.image_process.start()
+                print("[Image Process] has started")
+            print('[Main] Multi Process Communication has been started.')
 
         except Exception as error:
             raise error
@@ -74,7 +80,8 @@ class MultiProcessing:
 
     def end(self) -> None:
         self.android.disconnect_all()
-        print("[200] - Multi Processing has ended.")
+        self.algorithm.disconnect_all()
+        print("[Main] - Multi Processing has ended.")
 
     def start_reconnection(self) -> None:
         while True:
@@ -86,7 +93,7 @@ class MultiProcessing:
                    self.image_process.terminate()
                     
             except Exception as error:
-                print("Error during reconnection: ",error)
+                print("[Main] Error during reconnection: ",error)
                 raise error
 
     """
@@ -104,10 +111,10 @@ class MultiProcessing:
                         print(f"[Main] Writing to Algorithm Process: {payload}")
                         self.algorithm.write(payload)
                     else:
-                        print("[Main - Invalid Writing Target]")
+                        print("[Main] Invalid Writing Target")
 
             except Exception as error:
-                print("[Main - Error Writing to Target")
+                print("[Main] Error Writing to Target")
                 self.error_message(error)
 
     """
@@ -127,11 +134,14 @@ class MultiProcessing:
                     if len(message) <=0:
                         continue
     
-                    if message == AndroidToAlgorithm.DEMO_ANDROID_TO_ALGO_message:
-                        self.message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, message + NEWLINE))
+                    if message == AndroidToAlgorithm.DEMO_ANDROID_TO_ALGO_MSG:
+                        self.message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, message))
+                    else:
+                        self.message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, message))
 
-            except Exception as e:
-                print("Process of reading android failed %s" % str(e))
+            except Exception as error:
+                print("[Main] Process of reading android has failed")
+                self.error_message(error)
 
     """
     2.2 Android Write
@@ -145,18 +155,18 @@ class MultiProcessing:
                     self.android.write(message)
                 
             except Exception as error:
-                print('Process write_to_android failed: ' + str(error))
-                break
+                print('[Main] Process write_to_android has failed')
+                self.error_message(error)
 
     """
     2.3 Reconnect to android 
     Function: Disconnect Android Process as well as Read & Write  to/from Android Process
     """ 
     def reconnect_android(self):
-        print("[Disconnecting] Android Process is disconnecting.")
+        print("[Main] Disconnecting Android Process.")
         self.android.disconnect()
         #terminate all processes
-        #self.write_process.terminate()
+        self.write_process.terminate()
         self.read_from_android_process.terminate()
         self.write_to_android_process.terminate()
 
@@ -168,10 +178,10 @@ class MultiProcessing:
         self.write_to_android_process = Process(target=self.write_to_android)
         self.read_from_android_process.start()
         self.write_to_android_process.start()
+        self.write_process = Process(target=self.write_to_target)
         
-        #self.write_process = Process(target=self.write_to_target)
         #self.write_process.start()
-        print("[Main - Android Process is re-connected]")
+        print("[Main] Android Process has been Reconnected")
     
     def take_picture(self) -> None:
         try:
@@ -208,9 +218,9 @@ class MultiProcessing:
         while True:
             try:
                 if not self.image_queue.empty():
-
                     start_time = datetime.now()
                     image_message =  self.image_queue.get_nowait()
+                    print("[Main] Sending Image to Server.")
                     reply = image_sender.send_image(
                         "RPI Image:" + str(start_time.strftime("%d%m%H%M%S")), 
                         image_message[0]
@@ -229,42 +239,42 @@ class MultiProcessing:
                             self.image_count.value += 1
                             image_id_list.put_nowait(detected)
                         self.to_android_message_queue.put_nowait(AlgorithmToAndroid.DETECTED + NEWLINE)
-                    print(f'Time taken to process image: {str(datetime.now() - start_time)} seconds')
+                    print(f'[Main] Time taken to process image: {str(datetime.now() - start_time)} seconds')
 
             except Exception as error:
-                print('Image processing failed: ' + str(error))
+                print('[Main] Error - Image processing failed')
+                self.error_message(error)
     
-    def read_algorithm(self):
+    def read_from_algorithm(self):
         while True:
             try:
                 raw_message = self.algorithm.read()
-                
+
                 if raw_message is None:
                     continue
 
                 message_list = raw_message.split(MESSAGE_SEPARATOR)
             
-                for message in message_list:
+                if len(message_list) <=0:
+                    continue
+                print(message_list)
+                if message_list[0] == AlgorithmToAndroid.DEMO_ALGO_TO_ANDROID_MSG:
+                    print("[Main] Send to Android from Algorithm")
+                    self.to_android_message_queue.put_nowait(message_list[1])
+                
+                elif message_list[0] == AlgorithmToRPI.TAKE_PICTURE:
 
-                    if len(message) <=0:
-                        continue
-
-                    elif message[0] == AlgorithmToAndroid.DEMO_ALGO_TO_ANDROID_MSG:
-                        self.to_android_message_queue.put_nowait(self.format_message(ANDROID_HEADER, message))
+                    if self.image_count.value >= 5:
+                        self.message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, RPIToAlgorithm.IMAGE_REC_DONE)) #remove newline
                     
-                    elif message == AlgorithmToRPI.TAKE_PICTURE:
-
-                        if self.image_count.value >= 5:
-                            self.message_queue.put_nowait(self._formatted_(ALGORITHM_HEADER, RPIToAlgorithm.IMAGE_REC_DONE)) #remove newline
-                        
-                        else:
-                            image = self.take_picture()
-                            print('[Main] - RPI Picture Taken')
-                            self.message_queue.put_nowait(self._formatted_(ALGORITHM_HEADER, RPIToAlgorithm.TAKE_PICTURE_DONE)) #remove newline
-                            self.image_queue.put_nowait([image, message])
+                    else:
+                        image = self.take_picture()
+                        print('[Main] - RPI Picture Taken')
+                        self.image_queue.put_nowait([image, message_list[0]])
+                        self.message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, RPIToAlgorithm.TAKE_PICTURE_DONE)) #remove newline
                     
             except Exception as error:
-                print("[Main - Error Reading Algorithm Process]")
+                print("[Main] Error Reading Algorithm Process")
                 self.error_message(error)
 
     def format_message(self, target, payload) -> dict:

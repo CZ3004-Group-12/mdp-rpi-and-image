@@ -9,7 +9,8 @@ from misc.config import ALGO_SOCKET_BUFFER_SIZE, WIFI_IP, PORT
 
 class Algorithm:
     def __init__(self, host=WIFI_IP, port=PORT):
-        print("[Initilise] Algorithm Process")
+        print("[Algo] Initialising Algorithm Process")
+        
         self.host = host
         self.port = port
 
@@ -21,24 +22,25 @@ class Algorithm:
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(2)
-        
+        print(f"[Algo] Server Address at: {self.host}:{self.port}")
+
     def connect(self):
         while True:
             try:
-                print(f'[ALGO - Establishing Connection to {self.host}:{self.port}]')
+                print(f'[Algo] Accepting Connection to: {self.host}:{self.port}]')
                 if self.client_socket is None:
                     self.client_socket, self.address = self.server_socket.accept()
-                    print(f'[ALGO - Connected to Algoritmh Server at {self.host}:{self.port}]')
+                    print(f'[Algo] Connected to Algoritmh Server at {self.host}:{self.port}')
                     break
 
             except Exception as error:
-                print(f'[ALGO - Failed to connect to Algorithm Server at {self.host}:{self.port}]')
+                print(f'[Algo] Failed to connect to Algorithm Server at {self.host}:{self.port}')
                 self.error_message(error)
                 if self.client_socket is not None:
                     self.client_socket.close()
                     self.client_socket = None
             
-            print(f'[ALGO - Retrying for a connection to {self.host}:{self.port}]')
+            print(f'[Algo] Retrying for a connection to {self.host}:{self.port}')
 
     def disconnect(self):
         try:
@@ -46,10 +48,10 @@ class Algorithm:
                 self.client_socket.close()
                 self.client_socket = None
             
-            print(f'[ALGO - Disconnected Algorithm Client from Server]')
+            print(f'[Algo] Disconnected Algorithm Client from Server')
 
         except Exception as error:
-            print(f'[ALGO - Failed to disconnect Algorithm Client from Server]')
+            print(f'[[Algo] Failed to disconnect Algorithm Client from Server')
             self.error_message(error)
 
     def disconnect_all(self):
@@ -62,31 +64,32 @@ class Algorithm:
                 self.server_socket.close()
                 self.server_socket = None
 
-            print(f'[ALGO - Disconnected Algorithm sockets]')
+            print(f'[Algo] Disconnected Algorithm sockets')
 
         except Exception as error:
-            print(f'[ALGO - Failed to disconnect Algorithm sockets]')
+            print(f'[Algo] Failed to disconnect Algorithm sockets')
             self.error_message(error)
 
     def read(self):
         try:
             message = self.client_socket.recv(ALGO_SOCKET_BUFFER_SIZE).strip()
             if len(message) > 0:
-                print(f'[FROM ALGO]: {message}')
+                print(f'[Algo] Read Message from Algo Client: {message}')
                 return message
             return None
 
         except Exception as error:
-            print('Algorithm read failed: '+ str(error))
+            print("[Algo] Failed to read message from Algo Client.")
+            self.error_message(error)
             raise error
 
     def write(self, message):
         try:
-            print(f'[TO ALGO]: {message}')
+            print(f'[Algo] Message to Algo Client: {message}')
             self.client_socket.send(message)
 
         except Exception as error:
-            print('Algorithm write failed: '+ str(error))
+            print("[Algo] Failed to send to Algo Client.")
             self.error_message(error)
             raise error
 

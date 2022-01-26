@@ -15,7 +15,7 @@ from misc.config import ANDROID_SOCKET_BUFFER_SIZE, RFCOMM_CHANNEL, UUID
 
 class Android:
     def __init__(self) -> None:
-        print("[Initilise] Android Process")
+        print("[Android] Initialising Android Process")
         self.server_socket = None
         self.client_socket = None
         os.system("sudo hciconfig hci0 piscan")
@@ -31,22 +31,22 @@ class Android:
             profiles=[SERIAL_PORT_PROFILE],
             protocols = [ OBEX_UUID ]
         )
-        print('server socket:', str(self.server_socket))
+        print(f'[Android] Server Bluetooth Socket: {str(self.server_socket)}')
     
     def connect(self) -> None:
         retry = True
         while retry:
             try:
-                print(f"{BT_LISTENING} Listening on RFCOMM channel: {self.port}...")
+                print(f"[Android] Listening on RFCOMM channel: {self.port}...")
                 if self.client_socket == None:
                     self.client_socket, client_addr = self.server_socket.accept()
-                    print(f"{BT_CLIENT_CONNECTED} Bluetooth established connection at address: {str(client_addr)}")
+                    print(f"[Android] Bluetooth established connection at address: {str(client_addr)}")
                     retry = False
             except Exception as error:
-                print(f"{BT_ERROR} Fail to establish Bluetooth Connection: {str(error)}")
+                print(f"[Android] Failed to establish Bluetooth Connection: {str(error)}")
                 self.disconnect_client()
                 retry = True
-            print(f"{BT_RECONNECTION} Retrying Bluetooth Connection...")
+            print(f"[Android] Retrying Bluetooth Connection...")
 
     def disconnect_client(self) -> None:
         try:
@@ -54,7 +54,7 @@ class Android:
                 self.client_socket.close()
                 self.client_socket = None
         except Exception as error:	
-            print(f"{BT_ERROR} Fail to disconnect Client Socket: {str(error)}")
+            print(f"[Android] Fail to disconnect Client Socket: {str(error)}")
 
     def disconnect_server(self) -> None:
         try:
@@ -62,7 +62,7 @@ class Android:
                 self.server_socket.close()
                 self.server_socket = None
         except Exception as error:	
-            print(f"{BT_ERROR} Fail to disconnect Server Socket: {str(error)}")
+            print(f"[Android] Fail to disconnect Server Socket: {str(error)}")
 
     def disconnect_all(self) -> None:
         self.disconnect_client()
@@ -71,7 +71,7 @@ class Android:
     def read(self) -> None:
         try:
             message = self.client_socket.recv(ANDROID_SOCKET_BUFFER_SIZE).strip()
-            print(f'[FROM ANDROID] {message}')
+            print(f'[Android] [FROM ANDROID] {message}')
             if message is None:
                 return None
             if len(message) > 0:
@@ -79,16 +79,16 @@ class Android:
             return None
             
         except Exception as error:
-            print(f"{BT_ERROR} Fail to read {str(error)}")
+            print(f"[Android] Fail to read {str(error)}")
             raise error
       
     def write(self, message) -> None:
         try:
-            print(f'[TO ANDROID] {message}')
+            print(f'[Android] [TO ANDROID] {message}')
             self.client_socket.send(message)
 
         except Exception as error:	
-            print(f"{BT_ERROR}  Fail to write {str(error)}")
+            print(f"[Android] Fail to write {str(error)}")
             raise error
 
 
@@ -99,6 +99,6 @@ if __name__ == '__main__':
     try:
         while True:
             android.read()
-            android.write(input(f"{BT_TEST} Send Message: "))
+            android.write(input(f"[Android] Send Message: "))
     except KeyboardInterrupt:
-        print("Terminating the program now...")    
+        print("[Android] Terminating the program now...")    
