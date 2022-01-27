@@ -4,7 +4,7 @@
 
 ### 1) Collect training images 
 - Run camera_helper.py, specify `mode` and `img_id`. Move obstacle to different positions for variations
-- Transfer images from RPI to computer ...
+- Transfer images from RPI to computer, then start labelling the images
 
 
 ### 2) Labelling images for training
