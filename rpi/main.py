@@ -1,31 +1,34 @@
 import os
 import argparse
-from misc.config import IMAGE_PROCESSING_SERVER_URLS
 from src.multi_processing import MultiProcessing
+from misc.config import IMAGE_PROCESSING_SERVER_URLS
 
-parser = argparse.ArgumentParser(description="RPI Main Process")
+parser = argparse.ArgumentParser(description="Main Process For RPI")
+
 parser.add_argument(
-    '--image_server_host',
     type=str,
-    required=False,
     default=None,
-    choices =IMAGE_PROCESSING_SERVER_URLS.keys(),
-)
+    required=False,
+    name_or_flags='--img_server',
+    choices =IMAGE_PROCESSING_SERVER_URLS.keys())
 
 def init():
-    args = parser.parse_args()
-    server_host = args.image_server_host
-    os.system("sudo hciconfig hci0 piscan")
     multi_process = None
+    args = parser.parse_args()
+    server_host = args.img_server
+    os.system("sudo hciconfig hci0 piscan")
+    
     try:
-        print(server_host)
         if server_host not in IMAGE_PROCESSING_SERVER_URLS:
-            print("[Main] Image Server Host doesn't exist.")
-            return
-        multi_process = MultiProcessing(IMAGE_PROCESSING_SERVER_URLS[server_host])
+            print("[Main] Running without Image Server Host.")
+            multi_process = MultiProcessing()            
+        else:
+            print(f"[Main] Running with Image Server Host @ {server_host}")
+            multi_process = MultiProcessing(IMAGE_PROCESSING_SERVER_URLS[server_host])
         multi_process.start()
+
     except Exception as error:
-        print(error)
+        print(f"[Main] Error have occurred: {error}")
         if multi_process is not None:
             multi_process.end()
 

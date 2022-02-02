@@ -47,7 +47,6 @@ class Algorithm:
             if self.client_socket is not None:
                 self.client_socket.close()
                 self.client_socket = None
-            
             print(f'[Algo] Disconnected Algorithm Client from Server')
 
         except Exception as error:

@@ -8,7 +8,7 @@ via the server/client.
 import os
 from bluetooth import *
 from misc.status import *
-from misc.config import ANDROID_SOCKET_BUFFER_SIZE, RFCOMM_CHANNEL, UUID
+from misc.config import ANDROID_SOCKET_BUFFER_SIZE, UUID
 
 # UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
 # 00001108-0000-1000-8000-00805f9b34fb
