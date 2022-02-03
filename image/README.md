@@ -8,7 +8,7 @@
 
 
 ### 2) Labelling images for training
-- Clone ModifiedOpenLabelling
+- Clone ModifiedOpenLabelling:
 `git clone https://github.com/ivangrov/ModifiedOpenLabelling.git`
 - Place images in `ModifiedOpenLabelling/images` folder and remove the examples
 - Remove example files in `ModifiedOpenLabelling/bbox_txt` folder
@@ -22,10 +22,17 @@ Open train_custom.ipynb in google colab to train. Follow instructions in noteboo
 
 #### Training files:
 - Images
-    - Unlabelled images: https://drive.google.com/drive/folders/10ZCGqfw15J3IYnxq7tHaD-6XWdoFgX22?usp=sharing 
-    - Labelled training dataset: https://drive.google.com/drive/folders/1iktnVXs0W6Uimvz1A6cjyU8tAnH_Zp-1?usp=sharing 
+    - Unlabelled images: [here](https://drive.google.com/drive/folders/10ZCGqfw15J3IYnxq7tHaD-6XWdoFgX22?usp=sharing) 
+    - Labelled training dataset: [here](https://drive.google.com/drive/folders/1iktnVXs0W6Uimvz1A6cjyU8tAnH_Zp-1?usp=sharing) 
 - yaml file
-    - `custom_dataset.yaml`: https://drive.google.com/file/d/1TvoxBxlmI0rwjuhVkSPUm5tR6pg6J0u8/view?usp=sharing 
+    - `custom_dataset.yaml`: [here](https://drive.google.com/file/d/1TvoxBxlmI0rwjuhVkSPUm5tR6pg6J0u8/view?usp=sharing) 
 
-#### Inference file:
-- `best_epoch_first_test.pt`: https://drive.google.com/file/d/1PjmJgPMwzpig0ll79lZFYwg388Mpbp3C/view?usp=sharing 
+
+## Inference
+### Run inference codes
+- Codes to run inference are under `inference.py`
+- Uncomment model download line if there is a need to download model
+
+#### Checkpoint files:
+- Checkpoints: [here](https://drive.google.com/drive/folders/1ZHrY_ALSmzngmvtJ08LKtivsNKTM01Zu?usp=sharing) 
+

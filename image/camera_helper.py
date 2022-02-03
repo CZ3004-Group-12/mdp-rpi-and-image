@@ -7,8 +7,9 @@ from picamera import PiCamera
 camera = PiCamera()
 camera.resolution = (640, 480)
 
-
-# taking photos for training
+'''
+    Take photos for training
+'''
 def take_photo(image_id):
     # change rotation if camera on a different orientation
     camera.rotation = -180
