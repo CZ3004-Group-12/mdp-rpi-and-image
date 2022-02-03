@@ -69,20 +69,20 @@ class Algorithm:
             print(f'[Algo] Failed to disconnect Algorithm sockets')
             self.error_message(error)
 
-    def read(self):
+    def recv(self):
         try:
             message = self.client_socket.recv(ALGO_SOCKET_BUFFER_SIZE).strip()
             if len(message) > 0:
-                print(f'[Algo] Read Message from Algo Client: {message}')
+                print(f'[Algo] Receive Message from Algo Client: {message}')
                 return message
             return None
 
         except Exception as error:
-            print("[Algo] Failed to read message from Algo Client.")
+            print("[Algo] Failed to receive message from Algo Client.")
             self.error_message(error)
             raise error
 
-    def write(self, message):
+    def send(self, message):
         try:
             print(f'[Algo] Message to Algo Client: {message}')
             self.client_socket.send(message)

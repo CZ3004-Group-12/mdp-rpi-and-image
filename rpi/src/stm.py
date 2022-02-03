@@ -1,5 +1,5 @@
 import serial
-from misc.config import SERIAL_PORT, BAUD_RATE, FORMAT
+from misc.config import SERIAL_PORT, BAUD_RATE
 
 
 class STM:
@@ -31,17 +31,17 @@ class STM:
         except Exception as error:
             print(f"[Error] Failed to disconnect STM: {str(error)}")
 
-    def read(self) -> str:
+    def recv(self) -> str:
         try:
             message = self.stm.readline.strip()
             print(f"[STM] Message from STM: {message}")
             return message if len(message) else None
         except Exception as error:
-            print(f"[Error] Failed to read from STM: {str(error)}")
+            print(f"[Error] Failed to recieve from STM: {str(error)}")
 
-    def write(self, message) -> None:
+    def send(self, message) -> None:
         try:
             print(f"[STM] Message to STM: {message}")
             self.stm.write(message)
         except Exception as error:
-            print(f"[Error] Failed to write to STM: {str(error)}")
+            print(f"[Error] Failed to send to STM: {str(error)}")

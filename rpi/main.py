@@ -6,11 +6,11 @@ from misc.config import IMAGE_PROCESSING_SERVER_URLS
 parser = argparse.ArgumentParser(description="Main Process For RPI")
 
 parser.add_argument(
+    '--img_server',
     type=str,
     default=None,
     required=False,
-    name_or_flags='--img_server',
-    choices =IMAGE_PROCESSING_SERVER_URLS.keys())
+    choices=IMAGE_PROCESSING_SERVER_URLS.keys())
 
 def init():
     multi_process = None

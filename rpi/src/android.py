@@ -68,7 +68,7 @@ class Android:
         self.disconnect_client()
         self.disconnect_server()
 
-    def read(self) -> None:
+    def recv(self) -> None:
         try:
             message = self.client_socket.recv(ANDROID_SOCKET_BUFFER_SIZE).strip()
             print(f'[Android] [FROM ANDROID] {message}')
@@ -79,16 +79,16 @@ class Android:
             return None
             
         except Exception as error:
-            print(f"[Android] Fail to read {str(error)}")
+            print(f"[Android] Fail to recieve message from Android {str(error)}")
             raise error
       
-    def write(self, message) -> None:
+    def send(self, message) -> None:
         try:
             print(f'[Android] [TO ANDROID] {message}')
             self.client_socket.send(message)
 
         except Exception as error:	
-            print(f"[Android] Fail to write {str(error)}")
+            print(f"[Android] Fail to send {str(error)}")
             raise error
 
 
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     android.connect()
     try:
         while True:
-            android.read()
-            android.write(input(f"[Android] Send Message: "))
+            android.recv()
+            android.send(input(f"[Android] Send Message: "))
     except KeyboardInterrupt:
         print("[Android] Terminating the program now...")    
