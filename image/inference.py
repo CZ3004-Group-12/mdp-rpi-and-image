@@ -127,8 +127,10 @@ if __name__ == "__main__":
     # start inference
     start_time = time.time()
     inf = Inference("best_ckpt.pt")
-    label, cord_thres = inf.run_inference("test_images/test_fail.jpg") 
-    # inf.draw_bounding(label, cord_thres, "test_images/test_fail.jpg")
+    img_path = "test_images/test_fail.jpg"
+    label, cord_thres = inf.run_inference(img_path) 
+    if label != "-1":
+        inf.draw_bounding(label, cord_thres, img_path)
     end_time = time.time()
     
     print("Detected class: ", label, cord_thres)
