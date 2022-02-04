@@ -1,4 +1,4 @@
-# Image recognition
+# Image Detection
 
 ## Train Image Model
 
