@@ -20,8 +20,7 @@ class AlgoClient:
         self.message_receiver.start()
         print("[Algo Client] Algo Client Sender Thread started")
         self.message_sender.start()
-        # self.printer.start()
-
+        
     def message_sender_thread(self) -> None:
         # We want to encode into bytes.
         while True:
@@ -42,13 +41,6 @@ class AlgoClient:
                 print(message)
             except Exception as e:
                 print(e)
-    def print_messages(self) -> None:
-        while True:
-            try:
-                #msg = self.incoming_message_queue.get_nowait()
-                print("msg")
-            except queue.Empty:
-                pass
 
 # Standalone testing.
 if __name__ == '__main__':

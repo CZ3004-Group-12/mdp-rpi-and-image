@@ -5,7 +5,12 @@ via the server/client.
 '''
 
 import socket
-from misc.config import ALGO_SOCKET_BUFFER_SIZE, WIFI_IP, PORT
+#from misc.config import ALGO_SOCKET_BUFFER_SIZE, WIFI_IP, PORT, FORMAT
+
+FORMAT = "UTF-8"
+ALGO_SOCKET_BUFFER_SIZE = 1024
+WIFI_IP = "192.168.68.110"
+PORT = 5050
 
 class Algorithm:
     def __init__(self, host=WIFI_IP, port=PORT):
@@ -34,7 +39,7 @@ class Algorithm:
                     break
 
             except Exception as error:
-                print(f'[Algo] Failed to connect to Algorithm Server at {self.host}:{self.port}')
+                print(f'[Algo] Failed to setup connection for Algorithm Server at {self.host}:{self.port}')
                 self.error_message(error)
                 if self.client_socket is not None:
                     self.client_socket.close()
@@ -94,3 +99,15 @@ class Algorithm:
 
     def error_message(self, message):
         print(f"[Error Message]: {message}")
+
+if __name__ == '__main__':
+    server = Algorithm()
+    server.connect()
+    
+    while True:
+        message = input("[Server] Send Message to client: ")
+        server.send(message.encode(FORMAT))
+        recieved = server.recv()
+        if recieved is not None:
+            print(f"[Server] Received message from client: {recieved}")
+        

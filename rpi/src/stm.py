@@ -1,6 +1,5 @@
 import serial
-from misc.config import SERIAL_PORT, BAUD_RATE
-
+from misc.config import SERIAL_PORT, BAUD_RATE, FORMAT
 
 class STM:
     def __init__(self, serial_port=SERIAL_PORT, baud_rate=BAUD_RATE) -> None:
@@ -20,7 +19,8 @@ class STM:
             except Exception as error:
                 print(f"[Error] Failed to establish STM Connection: {str(error)}")
                 retry = True
-            print(f"[STM] Retrying STM Connection...")
+            if retry:
+                print(f"[STM] Retrying STM Connection...")
     
     def disconnect(self) -> None:
         try:
@@ -33,7 +33,7 @@ class STM:
 
     def recv(self) -> str:
         try:
-            message = self.stm.readline.strip()
+            message = self.stm.readline().strip()
             print(f"[STM] Message from STM: {message}")
             return message if len(message) else None
         except Exception as error:
@@ -45,3 +45,15 @@ class STM:
             self.stm.write(message)
         except Exception as error:
             print(f"[Error] Failed to send to STM: {str(error)}")
+
+# Standalone testing.
+if __name__ == '__main__':
+    stm = STM()
+    stm.connect()
+    try:
+        while True:
+            stm.recv()
+            message_to_send = input(f"[STM] Send Message: ")
+            stm.send(message_to_send.rstrip().encode(FORMAT))
+    except KeyboardInterrupt:
+        print("[STM] Terminating the program now...")    

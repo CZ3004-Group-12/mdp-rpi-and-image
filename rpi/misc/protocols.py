@@ -43,7 +43,7 @@ class AndroidToSTM:
     MOVE_W = "MOVE/W".encode()
     STOP   = "STOP".encode()
     ANDTOSTM = "ANDTOSTM".encode() # Format : ALGTOAND/MESSAGE - For raw message
-    MESSAGES = {MOVE_N, MOVE_S, MOVE_E, MOVE_W, STOP, ANDTOSTM}
+    MESSAGES = {MOVE_N: STMToRPI.W, MOVE_S: STMToRPI.S, MOVE_E: STMToRPI.D, MOVE_W: STMToRPI.A, STOP: STMToRPI.X, ANDTOSTM: ANDTOSTM}
 
 class AndroidToAlgorithm:
     START  = "START".encode()

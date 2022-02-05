@@ -1,6 +1,7 @@
 # import cv2
 import time
 import imagezmq
+import bluetooth
 from misc.config import *
 from misc.protocols import *
 from picamera import PiCamera
@@ -30,6 +31,8 @@ class MultiProcessing:
         #self.stm       = STM()
         self.android   = Android()
         self.algorithm = Algorithm()
+        
+        self.image_process = None
 
         # Message Queue - can't use pipe as theres multiple end points.
         self.to_stm_message_queue = self.manager.Queue()
@@ -136,7 +139,8 @@ class MultiProcessing:
                     
                     # Forward Android message to STM
                     if message in AndroidToSTM.MESSAGES:
-                        self.to_stm_message_queue.put_nowait(self.format_message(ANDROID_HEADER, message))
+                        # Mapping Android -> RPI <-> STM protocol.
+                        self.to_stm_message_queue.put_nowait(self.format_message(ANDROID_HEADER, AndroidToSTM.MESSAGES[message]))
                     # Forward Android message to Algo
                     elif message.split(COMMAND_SEPARATOR)[0] in AndroidToAlgorithm.MESSAGES:
                         self.to_algo_message_queue.put_nowait(self.format_message(ANDROID_HEADER, message))
@@ -145,6 +149,8 @@ class MultiProcessing:
 
             except Exception as error:
                 print("[Main] Process of reading android has failed")
+                # Peer has reset bluetooth network -> Restart now.
+                self.reconnect_android()
                 self.error_message(error)
     """
     1.2 send_to_android
@@ -174,7 +180,7 @@ class MultiProcessing:
         print("[Main] Android send/recv processes has been terminated ")
 
         # Close all Android bluetooth sockets.
-        self.android.disconnect_all()
+        self.android.disconnect_client()
 
         # Reconnect android
         self.android.connect()
