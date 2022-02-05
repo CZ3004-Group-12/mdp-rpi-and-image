@@ -1,8 +1,8 @@
 import torch
-import gdown
 import cv2
-
 import time
+
+from config.config import IMAGE_IDS
 
 class Inference:
     '''
@@ -47,40 +47,8 @@ class Inference:
         return detected_img_id, cords
 
     def draw_bounding(self, label, cord_thres, img_path):
-        # TODO: move dict to another file as constant
-        id_dict = {
-            "11": "one",
-            "12": "two",
-            "13": "three",
-            "14": "four",
-            "15": "five",
-            "16": "six",
-            "17": "seven",
-            "18": "eight",
-            "19": "nine",
-            "20": "Alphabet A",
-            "21": "Alphabet B",
-            "22": "Alphabet C",
-            "23": "Alphabet D",
-            "24": "Alphabet E",
-            "25": "Alphabet F",
-            "26": "Alphabet G",
-            "27": "Alphabet H",
-            "28": "Alphabet S",
-            "29": "Alphabet T",
-            "30": "Alphabet U", 
-            "31": "Alphabet V", 
-            "32": "Alphabet W",
-            "33": "Alphabet X", 
-            "34": "Alphabet Y", 
-            "35": "Alphabet Z", 
-            "36": "Up arrow", 
-            "37": "Down arrow", 
-            "38": "Right arrow",
-            "39": "Left arrow",
-            "40": "Stop",
-            "41": "Bulls eye"
-        }
+        
+        id_dict = IMAGE_IDS
 
         # read image
         img_taken = cv2.imread(img_path)
@@ -109,28 +77,23 @@ class Inference:
         # save image
         cv2.imwrite(output_path, img_taken)  
 
-class ModelDownload:
-    '''
-        Class to download model
-    '''
-    def __init__(self, model_url, model_path):
-        self.model_url = model_url
-        self.model_path = model_path
-        # Download model
-        gdown.download(self.model_url, self.model_path, quiet=False)
-        
 
 if __name__ == "__main__":
     # download model if needed
-    # md = ModelDownload("https://drive.google.com/uc?id=1EIWIDC2ntZ3D9DE9vWOip7c-6T_0YrT-", "best_ckpt.pt")
+    # from utils.file_helper import ModelDownload
+    # md = ModelDownload("best_ckpt.pt")
 
     # start inference
     start_time = time.time()
+    
     inf = Inference("best_ckpt.pt")
-    img_path = "test_images/test_fail.jpg"
+    img_path = "test_images/11.jpg"
     label, cord_thres = inf.run_inference(img_path) 
-    if label != "-1":
-        inf.draw_bounding(label, cord_thres, img_path)
+
+    # draw bounding box
+    # if label != "-1":
+    #     inf.draw_bounding(label, cord_thres, img_path)
+
     end_time = time.time()
     
     print("Detected class: ", label, cord_thres)
