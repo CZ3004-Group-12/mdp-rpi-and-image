@@ -12,6 +12,10 @@ parser.add_argument(
     required=False,
     choices=IMAGE_PROCESSING_SERVER_URLS.keys())
 
+parser.add_argument( '--stm', type=bool, default=False, required=False,)
+parser.add_argument( '--android', type=bool, default=False, required=False,)
+parser.add_argument( '--algo', type=bool, default=False, required=False,)
+
 def init():
     multi_process = None
     args = parser.parse_args()
@@ -21,10 +25,10 @@ def init():
     try:
         if server_host not in IMAGE_PROCESSING_SERVER_URLS:
             print("[Main] Running without Image Server Host.")
-            multi_process = MultiProcessing()            
+            multi_process = MultiProcessing(algo_on=args.algo, android_on=args.android, stm_on=args.stm)
         else:
             print(f"[Main] Running with Image Server Host @ {server_host}")
-            multi_process = MultiProcessing(IMAGE_PROCESSING_SERVER_URLS[server_host])
+            multi_process = MultiProcessing(IMAGE_PROCESSING_SERVER_URLS[server_host], algo_on=args.algo, android_on=args.android, stm_on=args.stm)
         multi_process.start()
 
     except Exception as error:

@@ -18,45 +18,36 @@ class MultiProcessing:
     """
     Handles the communication between STM, Android, Algorithm and Image Processing Server.
     """    
-    
-    def __init__(self, image_processing_server: str = None, android_on: bool = False, stm_on: bool = False, algo_on: bool = False) -> None:
+
+    def __init__(self, image_processing_server: str = None) -> None:
         """
         - Android   (o)
         - Algorithm (o)
-        - STM       (o)
+        - STM       (x)
         """
 
         print("[Main] Initialising Multi Processing Communication")
         self.manager   = Manager()
-        self.process_list = set()
-        self.stm = self.android = self.algorithm = self.image_process = None
-
-        # STM
-        if stm_on: 
-            self.stm = STM()
-            self.to_stm_message_queue = self.manager.Queue()
-            self.recv_from_stm_process = Process(target=self.recv_from_stm, name="[STM Recv Process]")
-            self.send_to_stm_process = Process(target=self.send_to_stm, name = "[STM Send Process]")
-            self.process_list.add(self.recv_from_stm_process)
-            self.process_list.add(self.send_to_stm_process)
+        #self.stm       = STM()
+        self.android   = Android()
+        self.algorithm = Algorithm()
         
-        # Android
-        if android_on: 
-            self.android = Android()
-            self.to_android_message_queue = self.manager.Queue()
-            self.recv_from_android_process = Process(target=self.recv_from_android, name="[Android Recv Process]")
-            self.send_to_android_process = Process(target=self.send_to_android, name="[Android Send Process]")
-            self.process_list.add(self.recv_from_android_process)
-            self.process_list.add(self.send_to_android_process)
+        self.image_process = None
 
-        # Algorithm
-        if algo_on: 
-            self.algorithm = Algorithm()
-            self.to_algo_message_queue = self.manager.Queue()
-            self.recv_from_algorithm_process = Process(target=self.recv_from_algorithm, name="[Algorithm Recv Process]")
-            self.send_to_algorithm_process = Process(target=self.send_to_algorithm, name="[Algorithm Send Process]")
-            self.process_list.add(self.recv_from_algorithm_process)
-            self.process_list.add(self.send_to_algorithm_process)
+        # Message Queue - can't use pipe as theres multiple end points.
+        self.to_stm_message_queue = self.manager.Queue()
+        self.to_algo_message_queue = self.manager.Queue()
+        self.to_android_message_queue = self.manager.Queue()
+        
+        # Reading Process
+        #self.recv_from_stm_process = Process(target=self.recv_from_stm, name="[STM Recv Process]")
+        self.recv_from_android_process = Process(target=self.recv_from_android, name="[Android Recv Process]")
+        self.recv_from_algorithm_process = Process(target=self.recv_from_algorithm, name="[Algorithm Recv Process]")
+
+        # Writing Process
+        #self.send_to_stm_process = Process(target=self.send_to_stm, name = "[STM Send Process]")
+        self.send_to_android_process = Process(target=self.send_to_android, name="[Android Send Process]")
+        self.send_to_algorithm_process = Process(target=self.send_to_algorithm, name="[Algorithm Send Process]")
 
         # Image Processing
         if image_processing_server is not None:
@@ -64,22 +55,23 @@ class MultiProcessing:
             self.image_queue = self.manager.Queue()
             self.image_processing_server = image_processing_server
             self.image_process = Process(target=self.image_processing, name="[Image Process]")
-            self.process_list.add(self.image_process)
+
+        self.process_list = [
+            #self.recv_from_stm_process,
+            self.recv_from_android_process,
+            self.recv_from_algorithm_process,
+            #self.send_to_stm_process,
+            self.send_to_android_process,
+            self.send_to_algorithm_process,
+            self.image_process,
+        ]
 
     # Start all processes -> Called from main.py
     def start(self) -> None:
         try:
-            # STM Instance
-            if not self.stm:
-                self.stm.connect()
-            
-            # Android Instance
-            if not self.android:
-                self.android.connect() 
-
-            # Algorithm Instance
-            if not self.algorithm:
-                self.algorithm.connect() 
+            # self.stm.connect() # STM Instance
+            self.android.connect() # Android Instance
+            self.algorithm.connect() # Algorithm Instance
             
             # Start all processes.
             for process in self.process_list:
@@ -99,27 +91,27 @@ class MultiProcessing:
 
     # Shut down all processes -> Called from main.py
     def end(self) -> None:
-        if not self.stm: self.stm.disconnect()
-        if not self.android: self.android.disconnect_all()
-        if not self.algorithm: self.algorithm.disconnect_all()
+        #self.stm.disconnect()
+        self.android.disconnect_all()
+        self.algorithm.disconnect_all()
         print("[Main] Multi Process Communication has successfully ended.")
 
     def check_process_alive(self) -> None:
         while True:
             try:
                 # Check STM connection
-                if not self.stm and not self.recv_from_stm_process.is_alive() or not self.send_to_stm_process.is_alive():
-                   self.reconnect_stm()
+                #if not self.recv_from_stm_process.is_alive() or not self.send_to_stm_process.is_alive():
+                #   self.reconnect_stm()
 
                 # Check -> Android connection
-                if not self.android and not self.recv_from_android_process.is_alive() or not self.send_to_android_process.is_alive():
+                if not self.recv_from_android_process.is_alive() or not self.send_to_android_process.is_alive():
                     self.reconnect_android()
                 
                 # Check -> Algorithm Connection.
-                if not self.algorithm and not self.recv_from_algorithm_process.is_alive() or not self.send_to_algorithm_process.is_alive():
+                if not self.recv_from_algorithm_process.is_alive() or not self.send_to_algorithm_process.is_alive():
                     self.reconnect_algorithm()
                 
-                if not self.image_process and not self.image_process.is_alive():
+                if self.image_process is not None and not self.image_process.is_alive():
                    self.image_process.terminate()
                     
             except Exception as error:
@@ -139,9 +131,7 @@ class MultiProcessing:
         while True:
             try:
                 raw_message = self.android.recv()
-
-                if raw_message is None: 
-                    continue           
+                if raw_message is None: continue           
 
                 for message in raw_message.split(MESSAGE_SEPARATOR):
 
@@ -150,17 +140,10 @@ class MultiProcessing:
                     # Forward Android message to STM
                     if message in AndroidToSTM.MESSAGES:
                         # Mapping Android -> RPI <-> STM protocol.
-                        if not self.stm:
-                            self.to_stm_message_queue.put_nowait(AndroidToSTM.MESSAGES[message])
-                        else:
-                            print("[Main] No Forwarding, as STM is not set-up.")
-
+                        self.to_stm_message_queue.put_nowait(self.format_message(ANDROID_HEADER, AndroidToSTM.MESSAGES[message]))
                     # Forward Android message to Algo
                     elif message.split(COMMAND_SEPARATOR)[0] in AndroidToAlgorithm.MESSAGES:
-                        if not self.algorithm:
-                            self.to_algo_message_queue.put_nowait(self.format_message(ANDROID_HEADER, message))
-                        else:
-                            print("[Main] No Forwarding, as Algo is not set-up.")
+                        self.to_algo_message_queue.put_nowait(self.format_message(ANDROID_HEADER, message))
                     else:
                         print("[Main] No Forwarding : Message from Android: {message}")
 
@@ -223,27 +206,18 @@ class MultiProcessing:
         while True:
             try:
                 raw_message = self.algorithm.recv()
-
                 if raw_message is None: continue
 
                 for message in raw_message.split(MESSAGE_SEPARATOR):
 
                     if message.split(COMMAND_SEPARATOR)[0] in AlgorithmToAndroid.MESSAGES:
-                        if not self.android:
-                            self.to_android_message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, message))
-                        else:
-                            print("[Main] No forwarding, as Android is not set-up.")
-
+                        self.to_android_message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, message))
                     if message in AlgorithmToRPI.MESSAGES:
                         if message == AlgorithmToRPI.TAKE_PICTURE:
                             image = self.take_picture()
                             print('[Main] - RPI Picture Taken')
                             self.image_queue.put_nowait([image, message])
-                    if message in AlgorithmToSTM.MESSAGES:
-                        if not self.stm:
-                            self.to_stm_message_queue.put_nowait(AlgorithmToSTM.MESSAGES[message])
-                        else:
-                            print("[Main] No forwarding, as STM is not set-up.")
+                            # self.message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, RPIToAlgorithm.TAKE_PICTURE_DONE)) #remove newline                    
             except Exception as error:
                 print("[Main] Error Reading Algorithm Process")
                 self.error_message(error)
@@ -302,7 +276,7 @@ class MultiProcessing:
         
         while True:
             try:
-                raw_message = self.stm.recv()
+                #raw_message = self.stm.recv()
                 raw_message = None
                 if raw_message is None: continue
 
@@ -328,7 +302,7 @@ class MultiProcessing:
             try:
                 if not self.to_stm_message_queue.empty():
                     message = self.to_stm_message_queue.get_nowait()
-                    self.stm.send(message)
+                    #self.stm.send(message)
             except Exception as error:
                 print('[Main] Process send_to_stm has failed')
                 self.error_message(error)
@@ -346,10 +320,10 @@ class MultiProcessing:
         self.send_to_stm_process.terminate()
     
         # Close all Android bluetooth sockets.
-        self.stm.disconnect()
+        #self.stm.disconnect()
 
         # Reconnect android
-        self.stm.connect()
+        #self.stm.connect()
 
         # Recreate all processes as Process cant be restart
         self.recv_from_stm_process = Process(target=self.recv_from_stm, name="[STM Recv Process]")
@@ -391,7 +365,7 @@ class MultiProcessing:
 
     def image_processing(self) -> None:
         # initialize the ImageSender object with the socket address of the server
-        image_id_list = set() 
+        image_id_list = set()
         image_sender = imagezmq.ImageSender(connect_to=self.image_processing_server)
         while True:
             try:

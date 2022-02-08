@@ -10,7 +10,7 @@ ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 
 # STM
-SERIAL_PORT = '/dev/ttyUSB0'
+SERIAL_PORT = ['/dev/ttyUSB0', '/dev/ttyUSB1']
 BAUD_RATE = 115200
 
 # Bluetooth Settings / # Hua Wei Phone

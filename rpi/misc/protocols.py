@@ -15,9 +15,9 @@ ALGORITHM_HEADER = 'ALG|'.encode()
 """ Source: STM """
 class STMToRPI:
     H = "H".encode() # Connection established
-    W = "W".encode() # Moving Foward
-    D = "D".encode() # Moving Right
-    A = "A".encode() # Moving Left
+    W = "fwd".encode() # Moving Foward
+    D = "rgt".encode() # Moving Right
+    A = "lft".encode() # Moving Left
     S = "S".encode() # Reverse
     X = "X".encode() # Stop
     L = "L".encode() # Three point turn left
@@ -69,7 +69,13 @@ class AlgorithmToRPI:
 
 class AlgorithmToSTM:
     ALGTOSTM = "ALGTOSTM".encode() # Format : ALGTOAND/MESSAGE - For raw message
-    MESSAGES = {ALGTOSTM}
+    MOVE_N = "MOVE/N".encode()
+    MOVE_S = "MOVE/S".encode()
+    MOVE_E = "MOVE/E".encode()
+    MOVE_W = "MOVE/W".encode()
+    STOP   = "STOP".encode()
+    ANDTOSTM = "ANDTOSTM".encode() # Format : ALGTOAND/MESSAGE - For raw message
+    MESSAGES = {ALGTOSTM : ALGTOSTM, MOVE_N: STMToRPI.W, MOVE_S: STMToRPI.S, MOVE_E: STMToRPI.D, MOVE_W: STMToRPI.A, STOP: STMToRPI.X}
     
 """ Source: RPI """
 class RPIToAlgorithm:
