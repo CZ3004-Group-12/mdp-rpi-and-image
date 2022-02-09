@@ -1,7 +1,7 @@
 import gdown
 import os 
 
-from config.config import MODEL_URL
+from image_detection.config.config import MODEL_URL
 
 class ModelDownload:
     '''
@@ -12,5 +12,12 @@ class ModelDownload:
         self.model_path = model_path
         # Download model
         gdown.download(self.model_url, self.model_path, quiet=False)
+
+
+if __name__ == "__main__":
+
+    
+    modeldl = ModelDownload("best_ckpt.pt")
+    print("done")
 
 

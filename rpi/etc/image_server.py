@@ -1,10 +1,13 @@
+
 import os
 import cv2
-from misc.config import *
 from imagezmq import ImageHub
 from datetime import datetime
+
+from rpi.misc.config import *
 from image_detection import inference
 from image_detection.utils import file_helper
+
 
 class CustomImageHub(ImageHub):
     def send_reply(self, reply_message):
@@ -22,7 +25,7 @@ class ImageProcessingServer:
         # initialize the ImageHub object
         self.image_hub = CustomImageHub()
         self.dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.ckpt_path = os.path.join(self.dir_path, "best_ckpt.pt")
+        self.ckpt_path = os.path.join(self.dir_path, "checkpoint/best_ckpt.pt")
         # download model
         file_helper.ModelDownload(self.ckpt_path)
         
@@ -41,7 +44,7 @@ class ImageProcessingServer:
                 raw_image_name = "img_" + str(datetime.now()) + ".jpg"
                 raw_image_path = os.path.join(self.dir_path, raw_image_name)
                 
-                # save raw image
+                # # save raw image
                 cv2.imwrite(raw_image_path, frame)
 
                 # run inference
