@@ -40,20 +40,24 @@ class ImageProcessingServer:
                 # receive RPi name and frame from the RPi and acknowledge the receipt
                 _, frame = self.image_hub.recv_image()
                 print('[Image Server] Connected and received frame at time: ' + str(datetime.now()))
+                
+                # TODO: obstacle number
+                self.obstacle_no = "1"
+
                 # form image file path for saving
-                raw_image_name = "img_" + str(datetime.now()) + ".jpg"
+                raw_image_name = "img_" + self.obstacle_no + ".jpg"
                 raw_image_path = os.path.join(self.dir_path, raw_image_name)
                 
-                # # save raw image
+                # save raw image
                 cv2.imwrite(raw_image_path, frame)
 
                 # run inference
                 inf = inference.Inference(self.ckpt_path)
-                label, cord_thres = inf.run_inference(raw_image_path) 
+                self.label, self.cord_thres = inf.run_inference(raw_image_path) 
 
                 # draw bounding box if image detected
-                if label != "-1":
-                    inf.draw_bounding(label, cord_thres, raw_image_path)
+                if self.label != "-1":
+                    inf.draw_bounding(self.label, self.cord_thres, raw_image_path)
 
                 break
 
@@ -67,6 +71,12 @@ class ImageProcessingServer:
         self.image_hub.send_reply('Done')
         # send_reply disconnects the connection
         print('[Image Server] Sent reply and disconnected at time: ' + str(datetime.now()) + '\n')
+
+        # return? to android if detected
+        if self.label != "-1":
+            return "TARGET, " + self.obstacle_no + ", " + self.label
+        else: 
+            return "NO DETECTION"
 
 # Standalone testing.
 if __name__ == '__main__':
