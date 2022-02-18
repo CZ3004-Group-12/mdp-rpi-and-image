@@ -11,4 +11,6 @@ if __name__ == "__main__":
     # start up server
     start_all()
     # once completed, open up window displaying results
-    display_images.get_results()
+    # TODO: get path from image server
+    path = ""
+    display_images.get_results(path)

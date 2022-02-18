@@ -2,12 +2,13 @@ import tkinter as tk
 from PIL import Image, ImageTk
 
 # TODO: Confirm width, height and number of obstacles
-def display_results():
+def display_results(dir_path):
     width = 600
     height= 480
     
+    # TODO: change number to image id
     for number in range(1, 6):
-        filename = f"../test_images/{number}_detected.jpg"
+        filename = f"{dir_path}/{number}.jpg"
         img = Image.open(filename)
 
         resize_img = img.resize((width, height))
@@ -22,9 +23,9 @@ def display_results():
         else:
             label.grid(row=2, column=number-3)
         
-def get_results():
+def get_results(dir_path):
     root = tk.Tk()
-    display_results()
+    display_results(dir_path)
     root.mainloop()
 
 if __name__ == '__main__':

@@ -71,7 +71,7 @@ class ImageProcessingServer:
         # send_reply disconnects the connection
         print('[Image Server] Sent reply and disconnected at time: ' + str(datetime.now()) + '\n')
 
-        # return? to android if detected
+        # TODO: return? to android if detected
         if self.label != "-1":
             return "TARGET, " + self.obstacle_no + ", " + self.label
         else: 
