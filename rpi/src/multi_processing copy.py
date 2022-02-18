@@ -212,12 +212,14 @@ class MultiProcessing:
 
                     if message.split(COMMAND_SEPARATOR)[0] in AlgorithmToAndroid.MESSAGES:
                         self.to_android_message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, message))
-                    if message in AlgorithmToRPI.MESSAGES:
+                    elif message in AlgorithmToRPI.MESSAGES:
                         if message == AlgorithmToRPI.TAKE_PICTURE:
                             image = self.take_picture()
                             print('[Main] - RPI Picture Taken')
                             self.image_queue.put_nowait([image, message])
                             # self.message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, RPIToAlgorithm.TAKE_PICTURE_DONE)) #remove newline                    
+                    else:
+                        print("[Main] No Forwarding.")
             except Exception as error:
                 print("[Main] Error Reading Algorithm Process")
                 self.error_message(error)

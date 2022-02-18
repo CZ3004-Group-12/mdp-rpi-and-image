@@ -5,12 +5,12 @@ via the server/client.
 '''
 
 import socket
-#from misc.config import ALGO_SOCKET_BUFFER_SIZE, WIFI_IP, PORT, FORMAT
+from misc.config import ALGO_SOCKET_BUFFER_SIZE, WIFI_IP, PORT, FORMAT
 
-FORMAT = "UTF-8"
-ALGO_SOCKET_BUFFER_SIZE = 1024
-WIFI_IP = "192.168.68.110"
-PORT = 5050
+# FORMAT = "UTF-8"
+# ALGO_SOCKET_BUFFER_SIZE = 1024
+# WIFI_IP = "192.168.68.110"
+# PORT = 5050
 
 class Algorithm:
     def __init__(self, host=WIFI_IP, port=PORT):

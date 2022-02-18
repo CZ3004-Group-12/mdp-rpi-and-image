@@ -19,16 +19,16 @@ parser.add_argument( '--algo', type=bool, default=False, required=False,)
 def init():
     multi_process = None
     args = parser.parse_args()
-    server_host = args.img_server
     os.system("sudo hciconfig hci0 piscan")
-    
     try:
-        if server_host not in IMAGE_PROCESSING_SERVER_URLS:
-            print("[Main] Running without Image Server Host.")
-            multi_process = MultiProcessing(algo_on=args.algo, android_on=args.android, stm_on=args.stm)
-        else:
-            print(f"[Main] Running with Image Server Host @ {server_host}")
-            multi_process = MultiProcessing(IMAGE_PROCESSING_SERVER_URLS[server_host], algo_on=args.algo, android_on=args.android, stm_on=args.stm)
+
+        server_host = IMAGE_PROCESSING_SERVER_URLS[args.img_server] if args.img_server in IMAGE_PROCESSING_SERVER_URLS else None
+        multi_process = MultiProcessing(
+            image_processing_server=server_host, 
+            algo_on=args.algo, 
+            android_on=args.android, 
+            stm_on=args.stm
+            )
         multi_process.start()
 
     except Exception as error:

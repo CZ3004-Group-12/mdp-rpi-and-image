@@ -1,7 +1,6 @@
-# import cv2
+import cv2
 import time
 import imagezmq
-import bluetooth
 from misc.config import *
 from misc.protocols import *
 from picamera import PiCamera
@@ -13,13 +12,15 @@ from multiprocessing import Process, Value, Manager
 from .stm import STM
 from .android import Android
 from .algorithm import Algorithm
+from .ultrasonic import UltraSonic
 
 class MultiProcessing:
     """
     Handles the communication between STM, Android, Algorithm and Image Processing Server.
     """    
     
-    def __init__(self, image_processing_server: str = None, android_on: bool = False, stm_on: bool = False, algo_on: bool = False) -> None:
+    def __init__(self, image_processing_server: str = None, android_on: bool = False, stm_on: bool = False, algo_on: bool = False, ultrasonic_on: bool = False) -> None:
+    
         """
         - Android   (o)
         - Algorithm (o)
@@ -28,11 +29,17 @@ class MultiProcessing:
 
         print("[Main] Initialising Multi Processing Communication")
         self.manager   = Manager()
+        self.image_count = -1
         self.process_list = set()
-        self.stm = self.android = self.algorithm = self.image_process = None
+        self.current_target  =  None
+        self.movement_len = Value('i', -1)
+        self.movement_type  = Value('i', 0) # 0: Android, 1: Algorithm
+        self.stm_ready_to_recv  = Value('i', 1)
+        self.stm = self.android = self.algorithm = self.image_process = self.ultrasonic = None
 
         # STM
-        if stm_on: 
+        if stm_on:
+            print("[Main] Running with STM") 
             self.stm = STM()
             self.to_stm_message_queue = self.manager.Queue()
             self.recv_from_stm_process = Process(target=self.recv_from_stm, name="[STM Recv Process]")
@@ -41,7 +48,8 @@ class MultiProcessing:
             self.process_list.add(self.send_to_stm_process)
         
         # Android
-        if android_on: 
+        if android_on:
+            print("[Main] Running with Android")  
             self.android = Android()
             self.to_android_message_queue = self.manager.Queue()
             self.recv_from_android_process = Process(target=self.recv_from_android, name="[Android Recv Process]")
@@ -51,6 +59,7 @@ class MultiProcessing:
 
         # Algorithm
         if algo_on: 
+            print("[Main] Running with Algorithm") 
             self.algorithm = Algorithm()
             self.to_algo_message_queue = self.manager.Queue()
             self.recv_from_algorithm_process = Process(target=self.recv_from_algorithm, name="[Algorithm Recv Process]")
@@ -60,25 +69,32 @@ class MultiProcessing:
 
         # Image Processing
         if image_processing_server is not None:
-            self.image_count = Value('i', 0)
+            print("[Main] Running with Image Processing") 
+            self.image_count = 5
             self.image_queue = self.manager.Queue()
             self.image_processing_server = image_processing_server
             self.image_process = Process(target=self.image_processing, name="[Image Process]")
             self.process_list.add(self.image_process)
 
+        if ultrasonic_on:
+            print("[Main] Running ultrasonic")
+            self.ultrasonic = UltraSonic()
+            self.recv_from_ultrasonic_process = Process(target=self.recv_from_ultrasonic, name="[Ultra Sonic Recv Process]")
+            self.process_list.add(self.recv_from_ultrasonic_process)
+
     # Start all processes -> Called from main.py
     def start(self) -> None:
         try:
             # STM Instance
-            if not self.stm:
+            if self.stm is not None:
                 self.stm.connect()
             
             # Android Instance
-            if not self.android:
+            if self.android is not None:
                 self.android.connect() 
 
             # Algorithm Instance
-            if not self.algorithm:
+            if self.algorithm is not None:
                 self.algorithm.connect() 
             
             # Start all processes.
@@ -99,27 +115,27 @@ class MultiProcessing:
 
     # Shut down all processes -> Called from main.py
     def end(self) -> None:
-        if not self.stm: self.stm.disconnect()
-        if not self.android: self.android.disconnect_all()
-        if not self.algorithm: self.algorithm.disconnect_all()
+        if self.stm is not None: self.stm.disconnect()
+        if self.android is not None: self.android.disconnect_all()
+        if self.algorithm is not None: self.algorithm.disconnect_all()
         print("[Main] Multi Process Communication has successfully ended.")
 
     def check_process_alive(self) -> None:
         while True:
             try:
                 # Check STM connection
-                if not self.stm and not self.recv_from_stm_process.is_alive() or not self.send_to_stm_process.is_alive():
+                if self.stm is not None and (not self.recv_from_stm_process.is_alive() or not self.send_to_stm_process.is_alive()):
                    self.reconnect_stm()
 
                 # Check -> Android connection
-                if not self.android and not self.recv_from_android_process.is_alive() or not self.send_to_android_process.is_alive():
+                if self.android is not None and (not self.recv_from_android_process.is_alive() or not self.send_to_android_process.is_alive()):
                     self.reconnect_android()
                 
                 # Check -> Algorithm Connection.
-                if not self.algorithm and not self.recv_from_algorithm_process.is_alive() or not self.send_to_algorithm_process.is_alive():
+                if self.algorithm is not None and (not self.recv_from_algorithm_process.is_alive() or not self.send_to_algorithm_process.is_alive()):
                     self.reconnect_algorithm()
                 
-                if not self.image_process and not self.image_process.is_alive():
+                if self.image_process is not None and not self.image_process.is_alive():
                    self.image_process.terminate()
                     
             except Exception as error:
@@ -145,22 +161,24 @@ class MultiProcessing:
 
                 for message in raw_message.split(MESSAGE_SEPARATOR):
 
-                    if len(message) == 0: continue
+                    if len(message) == 0: 
+                        continue
                     
                     # Forward Android message to STM
                     if message in AndroidToSTM.MESSAGES:
                         # Mapping Android -> RPI <-> STM protocol.
-                        if not self.stm:
-                            self.to_stm_message_queue.put_nowait(AndroidToSTM.MESSAGES[message])
-                        else:
+                        if self.stm is None:
                             print("[Main] No Forwarding, as STM is not set-up.")
+                            continue
+                        self.movement_type.value = 0
+                        self.to_stm_message_queue.put_nowait(AndroidToSTM.MESSAGES[message])
 
                     # Forward Android message to Algo
                     elif message.split(COMMAND_SEPARATOR)[0] in AndroidToAlgorithm.MESSAGES:
-                        if not self.algorithm:
-                            self.to_algo_message_queue.put_nowait(self.format_message(ANDROID_HEADER, message))
-                        else:
+                        if self.algorithm is None:
                             print("[Main] No Forwarding, as Algo is not set-up.")
+                            continue
+                        self.to_algo_message_queue.put_nowait(self.format_message(ANDROID_HEADER, message))
                     else:
                         print("[Main] No Forwarding : Message from Android: {message}")
 
@@ -227,23 +245,43 @@ class MultiProcessing:
                 if raw_message is None: continue
 
                 for message in raw_message.split(MESSAGE_SEPARATOR):
+                    
+                    # Split by '/'
+                    commands = message.split(COMMAND_SEPARATOR)
 
-                    if message.split(COMMAND_SEPARATOR)[0] in AlgorithmToAndroid.MESSAGES:
-                        if not self.android:
-                            self.to_android_message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, message))
-                        else:
+                    if commands[0] in AlgorithmToSTM.MESSAGES:
+                        
+                        if self.stm is None:
+                            print("[Main] No forwarding, as STM is not set-up.")
+                            continue
+
+                        # MOVEMENTS/4-15/B,B,B,B,FL,B,B,BR,F,F,F,F,F,F
+                        if commands[0] == AlgorithmToSTM.MOVEMENTS:
+                            self.current_target = commands[1]
+                            moveset = commands[2].split(COMMA_SEPARATOR)
+                            self.movement_type.value  = 1 # Set to Algorithm Movement
+                            self.movement_len.value = len(moveset) # Number of instructions.
+                            for move in moveset:
+                                # Map Algo command -> STM command.
+                                self.to_stm_message_queue.put_nowait(AlgorithmToSTM.MESSAGES[move])        
+                        else:    
+                            print("[Main] Algorithm To STM Command Type not recognised.")
+                        
+                    elif commands[0] in AlgorithmToAndroid.MESSAGES:
+                        if self.android is None:
                             print("[Main] No forwarding, as Android is not set-up.")
-
-                    if message in AlgorithmToRPI.MESSAGES:
-                        if message == AlgorithmToRPI.TAKE_PICTURE:
+                            continue 
+                        self.to_android_message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, message))
+    
+                    elif commands[0] == AlgorithmToRPI.OBSTACLE:
                             image = self.take_picture()
                             print('[Main] - RPI Picture Taken')
-                            self.image_queue.put_nowait([image, message])
-                    if message in AlgorithmToSTM.MESSAGES:
-                        if not self.stm:
-                            self.to_stm_message_queue.put_nowait(AlgorithmToSTM.MESSAGES[message])
-                        else:
-                            print("[Main] No forwarding, as STM is not set-up.")
+                            self.image_queue.put_nowait([image, commands[1]])
+
+                    else:
+                        print("[Main] No forwarding, command not recognised.")
+
+
             except Exception as error:
                 print("[Main] Error Reading Algorithm Process")
                 self.error_message(error)
@@ -303,15 +341,31 @@ class MultiProcessing:
         while True:
             try:
                 raw_message = self.stm.recv()
-                raw_message = None
-                if raw_message is None: continue
+                
+                if raw_message is None:
+                    continue
 
                 for message in raw_message.split(MESSAGE_SEPARATOR):
 
                     if message is None:
                         continue
 
-                    if message in STMToRPI.MESSAGES:
+                    elif message not in STM_MOVESET.MESSAGES:
+                        print("[Main] Command is not recognised under STM protocol. Please try again.")
+                    
+                    elif message == STM_MOVESET.DONE:
+                        self.to_android_message_queue.put_nowait(self.format_message(STM_HEADER, STM_MOVESET.ANDROID_DONE))
+                        if self.movement_type.value == 1 and self.movement_len.value > 0:
+                            self.movement_len.value -= 1
+                            if self.movement_len.value == 0:
+                                if self.image_process is None:
+                                    print('[Main] Image processing is not turned on')
+                                    continue                                
+                                image = self.take_picture()
+                                print('[Main] - RPI Picture Taken')
+                                self.image_queue.put_nowait([image, "obstacle"])
+                                
+                        self.stm_ready_to_recv.value = 1
                         print(f"[Main] Recieve from STM: {message}")
                         
             except Exception as error:
@@ -327,8 +381,15 @@ class MultiProcessing:
         while True:
             try:
                 if not self.to_stm_message_queue.empty():
-                    message = self.to_stm_message_queue.get_nowait()
-                    self.stm.send(message)
+                #if not self.to_stm_message_queue.empty() and self.stm_ready_to_recv.value == 1:
+                    command = self.to_stm_message_queue.get_nowait()
+                    # Map command to message to be sent
+                    if command not in STM_MOVESET.MESSAGES:
+                        print(f"[Main] STM Command not recognised {command}")
+                        continue
+                    self.stm.send(command)
+                    # Stop sending until STM completes the command.
+                    self.stm_ready_to_recv.value = 0
             except Exception as error:
                 print('[Main] Process send_to_stm has failed')
                 self.error_message(error)
@@ -362,26 +423,26 @@ class MultiProcessing:
     4. RPI Functions
     """
     def take_picture(self) -> None:
+
         try:
+            print("START")
             start_time = datetime.now()
 
             # initialize the camera and grab a reference to the raw camera capture
             camera = PiCamera(resolution=(IMAGE_WIDTH, IMAGE_HEIGHT))  # '1920x1080'
+            camera.rotation = -180
             rawCapture = PiRGBArray(camera)
-            
             # allow the camera to warmup
             time.sleep(0.1)
             
             # grab an image from the camera
+            #camera.capture(rawCapture)
             camera.capture(rawCapture, format=IMAGE_FORMAT)
             image = rawCapture.array
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             camera.close()
 
             print('[Main] Time Take to take picture: ' + str(datetime.now() - start_time) + 'seconds')
-            
-            # to gather training images
-            # os.system("raspistill -o images/test"+
-            # str(start_time.strftime("%d%m%H%M%S"))+".png -w 1920 -h 1080 -q 100")
         
         except Exception as error:
             print("[Main] Failed to Take Picture.")
@@ -391,38 +452,52 @@ class MultiProcessing:
 
     def image_processing(self) -> None:
         # initialize the ImageSender object with the socket address of the server
-        image_id_list = set() 
         image_sender = imagezmq.ImageSender(connect_to=self.image_processing_server)
         while True:
             try:
                 if not self.image_queue.empty():
-                    start_time = datetime.now()
-                    image_message =  self.image_queue.get_nowait()
-                    print("[Main] Sending Image to Server.")
-                    reply = image_sender.send_image("RPI Image:" + str(start_time.strftime("%d%m%H%M%S")), image_message[0])
-                    
-                    reply = reply.decode(FORMAT)
+                    # 4 Tries
+                    for _ in range(4):
+                        start_time = datetime.now()
+                        image_message =  self.image_queue.get_nowait()
+                        print("[Main] Sending Image to Server.")
+                        reply = image_sender.send_image("RPI Image:" + str(start_time.strftime("%d%m%H%M%S")), image_message[0])
+                        reply = reply.decode(FORMAT).split("/")
+                        print(f'[Main] Time taken to process image: {str(datetime.now() - start_time)} seconds')
+                        if reply[1] != -1: # Failed to detect image, need retry
+                            self.to_android_message_queue.put_nowait(self.format_message(RPI_HEADER, f"TARGET/{self.current_target}/{reply[1]}".encode(FORMAT)))
+                            # Ready for next movement
+                            self.to_algo_message_queue.put_nowait(self.format_message(RPI_HEADER, STM_MOVESET.ALGO_DONE))
+                            self.image_count -= 1
+                            if self.image_count == 0:
+                                self.to_android_message_queue.put_nowait(self.format_message(RPI_HEADER, RPIToAndroid.FINISH_EXPLORE))
+                            break
 
-                    # all images has been sent & processed.
-                    if reply == 'Done':
-                        break  
-                    
-                    self.to_algo_message_queue.put_nowait(self.format_message(RPI_HEADER, "PICTURE/2/1".encode(FORMAT)))
-                    self.to_android_message_queue.put_nowait(self.format_message(RPI_HEADER, "PICTURE/2/1".encode(FORMAT)))
-                    print(f'[Main] Time taken to process image: {str(datetime.now() - start_time)} seconds')
+                        print('[Main] Failed to detect image, retrying now.')
 
-                    """
-                    detected_images = reply.split(MESSAGE_SEPARATOR)
-                    
-                    for detected in detected_images:
-                        if detected not in image_id_list:
-                            self.image_count.value += 1
-                            image_id_list.put_nowait(detected)
-                        self.to_android_message_queue.put_nowait(AlgorithmToAndroid.DETECTED + NEWLINE)
-                    """
+                        # Move backwards command
+
+                        # Retake image
+                        image = self.take_picture()
+                        print('[Main] - RPI Picture Taken')
+                        self.image_queue.put_nowait([image, 'Retake'])
+                        continue
+
             except Exception as error:
                 print('[Main] Error - Image processing failed')
                 self.error_message(error)
+
+    def recv_from_ultrasonic(self):
+        while True:
+            try:
+                distance = self.ultrasonic.distance()
+                if distance < 20:
+                    self.to_stm_message_queue.put_nowait("D|{distance}")
+                    print("[Main] Ultrasonic detected that it's very near an obstacle.")
+                time.sleep(1)
+            except Exception as error:
+                print('[Main] Error - Ultrasonic read error')
+                raise error
 
     def format_message(self, header, message) -> dict:
         return header + message
