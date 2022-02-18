@@ -73,7 +73,7 @@ class Inference:
         cv2.putText(img_taken, id_str, (x2+40, y1+80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
 
         # get output path
-        output_path = img_path.split(".")[0] + "_detected." + img_path.split(".")[1]
+        output_path = label + ".jpg"
         # save image
         cv2.imwrite(output_path, img_taken)  
 

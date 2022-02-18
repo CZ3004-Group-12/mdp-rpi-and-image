@@ -1,5 +1,6 @@
 
 import os
+import time
 import cv2
 from imagezmq import ImageHub
 from datetime import datetime
@@ -40,12 +41,10 @@ class ImageProcessingServer:
                 # receive RPi name and frame from the RPi and acknowledge the receipt
                 _, frame = self.image_hub.recv_image()
                 print('[Image Server] Connected and received frame at time: ' + str(datetime.now()))
-                
-                # TODO: obstacle number
-                self.obstacle_no = "1"
 
+                identifier = str(time.time()).split('.')[0]
                 # form image file path for saving
-                raw_image_name = "img_" + self.obstacle_no + ".jpg"
+                raw_image_name = "img_" + identifier + ".jpg"
                 raw_image_path = os.path.join(self.dir_path, raw_image_name)
                 
                 # save raw image
