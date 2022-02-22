@@ -28,7 +28,7 @@ class ImageProcessingServer:
         self.dir_path = os.path.dirname(os.path.realpath(__file__))
         self.ckpt_path = os.path.join(self.dir_path, "checkpoint/best_ckpt.pt")
         # download model
-        file_helper.ModelDownload(self.ckpt_path)
+        # file_helper.ModelDownload(self.ckpt_path)
         
     def start(self):
 
@@ -45,8 +45,13 @@ class ImageProcessingServer:
                 identifier = str(time.time()).split('.')[0]
                 # form image file path for saving
                 raw_image_name = "img_" + identifier + ".jpg"
-                raw_image_path = os.path.join(self.dir_path, raw_image_name)
-                
+                raw_image_path = os.path.join(self.dir_path, "images", raw_image_name)
+
+                # check if images folder exists
+                directory_images = os.path.join(self.dir_path, "images")
+                if not os.path.exists(directory_images):
+                    os.makedirs(directory_images)
+
                 # save raw image
                 cv2.imwrite(raw_image_path, frame)
 
@@ -56,7 +61,7 @@ class ImageProcessingServer:
 
                 # draw bounding box if image detected
                 if self.label != "-1":
-                    inf.draw_bounding(self.label, self.cord_thres, raw_image_path)
+                    inf.draw_bounding(self.label, self.cord_thres, raw_image_path, self.dir_path)
 
                 break
 
@@ -72,10 +77,10 @@ class ImageProcessingServer:
         print('[Image Server] Sent reply and disconnected at time: ' + str(datetime.now()) + '\n')
 
         # TODO: return? to android if detected
-        if self.label != "-1":
-            return "TARGET, " + self.obstacle_no + ", " + self.label
-        else: 
-            return "NO DETECTION"
+        # if self.label != "-1":
+        #     return self.label
+        # else: 
+        #     return "NO DETECTION"
 
 # Standalone testing.
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+import os
 import torch
 import cv2
 import time
@@ -46,8 +47,7 @@ class Inference:
         # return results
         return detected_img_id, cords
 
-    def draw_bounding(self, label, cord_thres, img_path):
-        
+    def draw_bounding(self, label, cord_thres, img_path, dir_path):
         id_dict = IMAGE_IDS
 
         # read image
@@ -72,8 +72,14 @@ class Inference:
         cv2.putText(img_taken, desc, (x2+40, y1+40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
         cv2.putText(img_taken, id_str, (x2+40, y1+80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
 
+        # create output folder if not exists
+        directory_detected = os.path.join(dir_path, "images_detected")
+        if not os.path.exists(directory_detected):
+            os.makedirs(directory_detected)
+
         # get output path
-        output_path = label + ".jpg"
+        file_name = label + ".jpg"
+        output_path = os.path.join(directory_detected, file_name)
         # save image
         cv2.imwrite(output_path, img_taken)  
 

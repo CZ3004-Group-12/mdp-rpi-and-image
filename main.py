@@ -13,4 +13,4 @@ if __name__ == "__main__":
     # once completed, open up window displaying results
     # TODO: get path from image server
     path = ""
-    display_images.get_results(path)
+    # display_images.get_results(path)
