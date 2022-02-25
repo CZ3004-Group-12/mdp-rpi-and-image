@@ -62,8 +62,7 @@ class ImageProcessingServer:
                 # draw bounding box if image detected
                 if self.label != "-1":
                     inf.draw_bounding(self.label, self.cord_thres, raw_image_path, self.dir_path)
-
-                break
+                    self.image_hub.send_reply(self.label)
 
             except KeyboardInterrupt as e:
                 print("[Image Server] Ctrl-C")

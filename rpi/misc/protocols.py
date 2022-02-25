@@ -8,88 +8,41 @@ MESSAGE_SEPARATOR = "|".encode()
 COMMAND_SEPARATOR = "/".encode() # ROBOT/x/y
 COMMA_SEPARATOR = ",".encode()
 
+DEBUG_HEADER = "DEBUG/".encode()
 RPI_HEADER = 'RPI|'.encode()
 STM_HEADER = 'STM|'.encode()
 ANDROID_HEADER = 'AND|'.encode()
 ALGORITHM_HEADER = 'ALG|'.encode()
 
 """ Source: STM """
+#F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F
 # 6 Direction Command
-COMMAND_W = "W".encode()
-COMMAND_S = "S".encode()
-COMMAND_A = "A".encode()
-COMMAND_D = "D".encode()
-COMMAND_Q = "Q".encode()
-COMMAND_E = "E".encode()
-# Flags 
-ANGLE_0    = "x0000".encode()
-ANGLE_30   = "x0030".encode()
-DISTANCE   = "1500".encode()
+FORWARD_DISTANCE  = 14
+FORWARD_ANGLE = "x0194"
+BACKWARD_DISTANCE = 14
+BACKWARD_ANGLE = "x0194"
 
 class STM_MOVESET:
     # Command | D Flag | Distance | Direction | Angle Flag | Angle
-    SETUP_ONE = "P0001x0001".encode()
-    SETUP_TWO = "I0005x0005".encode()
-    W = COMMAND_W + DISTANCE + ANGLE_0 # Moving Foward
-    S = COMMAND_S + DISTANCE + ANGLE_0 # Moving Backward
-    Q = COMMAND_Q + DISTANCE + ANGLE_30 # Moving Top Left
-    E = COMMAND_E + DISTANCE + ANGLE_30 # Moving Top Right
-    A = COMMAND_A + DISTANCE + ANGLE_30 # Moving Btm Left
-    D = COMMAND_D + DISTANCE + ANGLE_30 # Moving Btm Right
-    X = "X".encode()
-    DONE = "M".encode()
-    ANDROID_DONE = "DONE".encode() # Done for android
-    ALGO_DONE = "ROBOT/NEXT".encode() # Done for algorithm
+    SETUP_I = "I0900x0100".encode()
+    SETUP_P = "P1200x1100".encode()
+    W       = ["Q0014x0194".encode()]
+    S       = ["D0014x0194".encode()]
+    Q       = ["Q0101x2605".encode(), "S0019x0000".encode()]
+    E       = ["E0104x2330".encode(), "S0022x0000".encode()]
+    A       = ["W0022x0000".encode(), "A0114x2585".encode()]
+    D       = ["W0020x0000".encode(), "D0109x2400".encode()]
+    DONE    = "0000000000".encode()
+    SETUP_DONE   = "00000000000000000000".encode()
     
     # Map command to message
-    MESSAGES = { W, S, Q, E, A, D, DONE, ANDROID_DONE, ALGO_DONE}
+    MESSAGES = { SETUP_I, SETUP_P, DONE, SETUP_DONE}
 
 class STMToAndroid:
     STATUS = "STATUS".encode()
+    DONE   = "DONE".encode()
     DEBUG  = "DEBUG".encode()
     MESSAGES = {STATUS, DEBUG}
-
-""" Source: Android """
-class AndroidToSTM:
-    MOVE_F  = "MOVE/F".encode()
-    MOVE_R  = "MOVE/R".encode()
-    MOVE_L  = "MOVE/L".encode()
-    MOVE_B  = "MOVE/B".encode()
-    MOVE_BL = "MOVE/BL".encode()
-    MOVE_BR = "MOVE/BR".encode()
-    STOP    = "STOP".encode()
-    ANDTOSTM = "ANDTOSTM".encode() # Format : ALGTOAND/MESSAGE - For raw message
-    MESSAGES = {
-        MOVE_F : STM_MOVESET.W, 
-        MOVE_R : STM_MOVESET.E,
-        MOVE_L : STM_MOVESET.Q,
-        MOVE_B : STM_MOVESET.S, 
-        MOVE_BL: STM_MOVESET.A,
-        MOVE_BR: STM_MOVESET.D,
-        STOP   : STM_MOVESET.X,
-        ANDTOSTM: ANDTOSTM
-        }
-
-class AndroidToAlgorithm:
-    START  = "START".encode()
-    STOP   = "STOP".encode()
-    ANDTOALG = "ANDTOALG".encode() # Format : ANDTOALG/MESSAGE - For raw message
-    MESSAGES = {START, STOP, ANDTOALG}
-
-class AndroidToRPI:
-    DEMO_ANDROID_TO_RPI_MSG = "AND_RPI".encode()
-
-""" Source: Algorithm """
-class AlgorithmToAndroid:
-    ROBOT  = "ROBOT".encode()
-    DEBUG = "DEBUG".encode()
-    ALGTOAND = "ALGTOAND".encode() # Format : ALGTOAND/MESSAGE - For raw message
-    MESSAGES = {ROBOT, DEBUG, ALGTOAND}
-
-class AlgorithmToRPI:
-    OBSTACLE = "OBSTACLE".encode()
-    TAKE_PICTURE = "TAKE_PICTURE".encode()
-    MESSAGES = {TAKE_PICTURE, OBSTACLE}
 
 class AlgorithmToSTM:
     ALGTOSTM       = "ALGTOSTM".encode() # Format : ALGTOAND/MESSAGE - For raw message
@@ -111,18 +64,55 @@ class AlgorithmToSTM:
         BACKWARD_LEFT: STM_MOVESET.A,
         BACKWARD_RIGHT: STM_MOVESET.D,
         }
-    
+
+""" Source: Android """
+class AndroidToSTM:
+    START = "START".encode()
+    MOVE_F  = "MOVE/F".encode()
+    MOVE_R  = "MOVE/R".encode()
+    MOVE_L  = "MOVE/L".encode()
+    MOVE_B  = "MOVE/B".encode()
+    MOVE_BL = "MOVE/BL".encode()
+    MOVE_BR = "MOVE/BR".encode()
+    ANDTOSTM = "ANDTOSTM".encode() # Format : ALGTOAND/MESSAGE - For raw message
+    MESSAGES = {
+        START : START,
+        MOVE_F : [AlgorithmToSTM.FORWARD], 
+        MOVE_R : [AlgorithmToSTM.FORWARD_RIGHT], 
+        MOVE_L : [AlgorithmToSTM.FORWARD_LEFT], 
+        MOVE_B : [AlgorithmToSTM.BACKWARD], 
+        MOVE_BL: [AlgorithmToSTM.BACKWARD_LEFT], 
+        MOVE_BR: [AlgorithmToSTM.BACKWARD_RIGHT], 
+        ANDTOSTM: ANDTOSTM,
+        }
+
+class AndroidToAlgorithm:
+    EXPLORE = "EXPLORE".encode()
+    ANDTOALG = "ANDTOALG".encode() # Format : ANDTOALG/MESSAGE - For raw message
+    MESSAGES = {EXPLORE, ANDTOALG}
+
+class AndroidToRPI:
+    START  = "START".encode()
+    STOP   = "STOP".encode()
+    DEMO_ANDROID_TO_RPI_MSG = "AND_RPI".encode()
+
+""" Source: Algorithm """
+class AlgorithmToAndroid:
+    ROBOT  = "ROBOT".encode()
+    DEBUG = "DEBUG".encode()
+    ALGTOAND = "ALGTOAND".encode() # Format : ALGTOAND/MESSAGE - For raw message
+    MESSAGES = {ROBOT, DEBUG, ALGTOAND}
+
+class AlgorithmToRPI:
+    OBSTACLE = "OBSTACLE".encode()
+    TAKE_PICTURE = "TAKE_PICTURE".encode()
+    MESSAGES = {TAKE_PICTURE, OBSTACLE}
+
 """ Source: RPI """
 class RPIToAlgorithm:
-    PICTURE = "PICTURE".encode()
-    IMAGE_REC_DONE = "Done Image Recogniton".encode()
-    TAKE_PICTURE_DONE = "Done Taking Picture".encode()
-    DEMO_RPI_TO_ALGO_MSG = "RPI_ALGO".encode()
+    REQUEST_ROBOT_NEXT    = "ROBOT/NEXT".encode() # Done for algorithm
 
 class RPIToAndroid:
     FINISH_PATH = "FINISH/PATH".encode()
     FINISH_EXPLORE = "FINISH/EXPLORE".encode()
     DEMO_RPI_TO_AND_MSG = "RPI_AND".encode()
-
-class RPIToSTM:
-    DEMO_RPI_TO_STM_MSG = "RPI_STM".encode()
