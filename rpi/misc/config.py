@@ -1,11 +1,3 @@
-"""
-HEADER = 64
-PORT = 5050
-FORMAT = 'utf-8'
-DISCONNECT_MESSAGE = "DISCONNECT!"
-SERVER = "192.168.86.54"
-ADDR = (SERVER, PORT)
-"""
 # Encoding / Decoding Format
 FORMAT = "utf-8"
 
