@@ -19,7 +19,7 @@ class MultiProcessing:
     Handles the communication between STM, Android, Algorithm and Image Processing Server.
     """    
     
-    def __init__(self, image_processing_server: str = None, android_on: bool = False, stm_on: bool = False, algo_on: bool = False, ultrasonic_on: bool = False, img_count: int = 0) -> None:
+    def __init__(self, image_processing_server: str = None, android_on: bool = False, stm_on: bool = False, algo_on: bool = False, ultrasonic_on: bool = False, img_count: int = 5) -> None:
     
         """
         - Android   (o)
@@ -278,7 +278,7 @@ class MultiProcessing:
                         if self.android is None:
                             print("[Main] No forwarding, as Android is not set-up.")
                             continue 
-                        self.to_android_message_queue.put_nowait(self.format_message(ALGORITHM_HEADER, message))
+                        self.to_android_message_queue.put_nowait(self.format_message(AND_HEADER + ALGORITHM_HEADER, message))
     
                     elif commands[0] == AlgorithmToRPI.OBSTACLE:
                             image = self.take_picture()
@@ -385,45 +385,54 @@ class MultiProcessing:
 
                 if isinstance(message, list):
                     commands = []
+                    commands_len = []
                     index, length = 0, len(message)
                     while index < length:
                         if message[index] == AlgorithmToSTM.FORWARD:
                             curIndex = index
-                            while message[curIndex] == AlgorithmToSTM.FORWARD:
+                            while curIndex < length and message[curIndex] == AlgorithmToSTM.FORWARD:
                                 curIndex += 1
-                            commands.append([("Q" + str((curIndex - index) * FORWARD_DISTANCE).rjust(4, '0') + FORWARD_ANGLE).encode()])
+                            commands_len.append(curIndex - index)
+                            commands.append([("Q" + str(int(((curIndex - index) * FORWARD_DISTANCE)-8)).rjust(4, '0') + FORWARD_ANGLE).encode()])
                             index = curIndex
                         elif message[index] == AlgorithmToSTM.BACKWARD:
                             curIndex = index
-                            while message[curIndex] == AlgorithmToSTM.BACKWARD:
+                            while curIndex < length and message[curIndex] == AlgorithmToSTM.BACKWARD:
                                 curIndex += 1
-                            commands.append([("S" + str((curIndex - index) * BACKWARD_DISTANCE).rjust(4, '0') + BACKWARD_ANGLE).encode()])
+                            commands_len.append(curIndex - index)
+                            commands.append([("S" + str(int(((curIndex - index) * FORWARD_DISTANCE)-8)).rjust(4, '0') + BACKWARD_ANGLE).encode()])
                             index = curIndex
                         else:
                             commands.append(AlgorithmToSTM.MESSAGES[message[index]])
+                            for _ in AlgorithmToSTM.MESSAGES[message[index]]:
+                                commands_len.append(1)
                             index += 1
+                            
                     
-                    # One whole movement 
+                    # One whole movement
+                    num = 0
                     for command in commands:
                         index, length = 0, len(command)
+
                         while index < length:
                             if self.stm_ready_to_recv.value == 1:
+                                if self.mode.value == 1:
+                                    print("[Main] - Send Android")
+                                    self.to_android_message_queue.put_nowait(self.format_message(AND_HEADER + STM_HEADER, STMToAndroid.DONE + str(commands_len[num]).encode()))
                                 self.stm_ready_to_recv.value = 0
                                 self.stm.send(command[index])
                                 index += 1
+                                num += 1
 
-                        while self.stm_ready_to_recv != 1:
+                        while self.stm_ready_to_recv.value != 1:
                             continue
                         # STM complete an command -> Forward to android.
                         print("[Main] STM Completed an move.")
 
                         # Send done to android only in Explore mode.
-                        if self.mode.value == 1:
-                            self.to_android_message_queue.put_nowait(self.format_message(STM_HEADER, STMToAndroid.DONE))
-                    
-                    # Stall until stm finishes
-                    while self.stm_ready_to_recv.value != 0:
-                        continue
+                        #if self.mode.value == 1:
+                            # print("[Main] - Send Android that it's done")
+                            # self.to_android_message_queue.put_nowait(self.format_message(STM_HEADER, STMToAndroid.DONE))
                     
                     # On Exploration mode -> Take picture time.
                     if self.mode.value == 1:
@@ -521,13 +530,13 @@ class MultiProcessing:
 
                         if reply != "-1": # Image is being detected.
                             print(f"[Main] Detected Image: {reply}")
-                            self.to_android_message_queue.put_nowait(self.format_message(RPI_HEADER, f"TARGET/{self.current_target.value}/{reply}".encode(FORMAT)))
+                            self.to_android_message_queue.put_nowait(self.format_message(AND_HEADER + RPI_HEADER, f"TARGET/{reply}".encode(FORMAT)))
                             # Request for next moveset.
                             self.to_algo_message_queue.put_nowait(self.format_message(RPI_HEADER, RPIToAlgorithm.REQUEST_ROBOT_NEXT))
                             self.image_count.value -= 1
                             # Exploration is done.
                             if self.image_count == 0:
-                                self.to_android_message_queue.put_nowait(self.format_message(RPI_HEADER, RPIToAndroid.FINISH_EXPLORE))
+                                self.to_android_message_queue.put_nowait(self.format_message(AND_HEADER + RPI_HEADER, RPIToAndroid.FINISH_EXPLORE))
                                 self.end()
                             break
                         
@@ -538,7 +547,7 @@ class MultiProcessing:
                         # Move backwards command
                         self.mode.value = 0
                         self.to_stm_message_queue.put_nowait([AlgorithmToSTM.BACKWARD])
-                        while self.stm_ready_to_recv.value != 0:
+                        while self.stm_ready_to_recv.value != 1:
                             continue
                         
                         # Retake photo
@@ -551,8 +560,9 @@ class MultiProcessing:
                     # Exceed number of tries -> Give up -> Move forward and request next set of movements.
                     if no_tries != 0:
                         # Time to move forward and request next step.
+                        self.mode.value = 1
                         self.to_stm_message_queue.put_nowait([AlgorithmToSTM.FORWARD] * no_tries)
-                        while self.stm_ready_to_recv.value != 0:
+                        while self.stm_ready_to_recv.value != 1:
                             continue
                         self.to_algo_message_queue.put_nowait(self.format_message(RPI_HEADER, RPIToAlgorithm.REQUEST_ROBOT_NEXT))
 

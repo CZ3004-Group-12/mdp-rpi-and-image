@@ -26,7 +26,7 @@ class Algorithm:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.host, self.port))
-        self.server_socket.listen(2)
+        self.server_socket.listen()
         print(f"[Algo] Server Address at: {self.host}:{self.port}")
 
     def connect(self):

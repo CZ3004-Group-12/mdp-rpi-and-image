@@ -7,6 +7,7 @@ NEWLINE = "\n".encode()
 MESSAGE_SEPARATOR = "|".encode()
 COMMAND_SEPARATOR = "/".encode() # ROBOT/x/y
 COMMA_SEPARATOR = ",".encode()
+AND_HEADER = "&".encode()
 
 DEBUG_HEADER = "DEBUG/".encode()
 RPI_HEADER = 'RPI|'.encode()
@@ -17,21 +18,30 @@ ALGORITHM_HEADER = 'ALG|'.encode()
 """ Source: STM """
 #F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F,F
 # 6 Direction Command
-FORWARD_DISTANCE  = 14
+FORWARD_DISTANCE  = 20.3
 FORWARD_ANGLE = "x0194"
-BACKWARD_DISTANCE = 14
+BACKWARD_DISTANCE = 20.3
 BACKWARD_ANGLE = "x0194"
 
-class STM_MOVESET:
-    # Command | D Flag | Distance | Direction | Angle Flag | Angle
-    SETUP_I = "I0900x0100".encode()
-    SETUP_P = "P1200x1100".encode()
+"""
+    Lab Movement calibration.
     W       = ["Q0014x0194".encode()]
     S       = ["D0014x0194".encode()]
     Q       = ["Q0101x2605".encode(), "S0019x0000".encode()]
     E       = ["E0104x2330".encode(), "S0022x0000".encode()]
     A       = ["W0022x0000".encode(), "A0114x2585".encode()]
     D       = ["W0020x0000".encode(), "D0109x2400".encode()]
+"""
+class STM_MOVESET:
+    # Command | D Flag | Distance | Direction | Angle Flag | Angle
+    SETUP_I = "I0900x0100".encode()
+    SETUP_P = "P1200x1100".encode()
+    W       = ["Q0013x0140".encode()]
+    S       = ["D0013x0140".encode()]
+    Q       = ["Q0105x2585".encode(), "S0019x0000".encode()]
+    E       = ["E0107x2242".encode(), "S0023x0000".encode()]
+    A       = ["W0027x0000".encode(), "A0117x2295".encode()]
+    D       = ["W0023x0000".encode(), "D0117x2295".encode()]
     DONE    = "0000000000".encode()
     SETUP_DONE   = "00000000000000000000".encode()
     
@@ -40,7 +50,7 @@ class STM_MOVESET:
 
 class STMToAndroid:
     STATUS = "STATUS".encode()
-    DONE   = "DONE".encode()
+    DONE   = "DONE/".encode()
     DEBUG  = "DEBUG".encode()
     MESSAGES = {STATUS, DEBUG}
 

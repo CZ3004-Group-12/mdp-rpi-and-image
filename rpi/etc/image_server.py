@@ -60,10 +60,16 @@ class ImageProcessingServer:
                 self.label, self.cord_thres = inf.run_inference(raw_image_path) 
 
                 # draw bounding box if image detected
-                if self.label != "-1":
+                if self.label != "-1" and self.label != "41":
+                    print(f"Detect Image ID: {self.label}")
                     inf.draw_bounding(self.label, self.cord_thres, raw_image_path, self.dir_path)
                     self.image_hub.send_reply(self.label)
-
+                else:
+                    if self.label == "41":
+                        print("Detected Bullseye")
+                    else:
+                        print("No image is being detected")
+                    self.image_hub.send_reply("-1")
             except KeyboardInterrupt as e:
                 print("[Image Server] Ctrl-C")
                 break

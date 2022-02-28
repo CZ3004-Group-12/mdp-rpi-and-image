@@ -46,7 +46,7 @@ class Android:
                 print(f"[Android] Failed to establish Bluetooth Connection: {str(error)}")
                 self.disconnect_client()
                 retry = True
-            print(f"[Android] Retrying Bluetooth Connection...")
+                print(f"[Android] Retrying Bluetooth Connection...")
 
     def disconnect_client(self) -> None:
         try:
