@@ -29,6 +29,10 @@ class ImageProcessingServer:
         self.ckpt_path = os.path.join(self.dir_path, "checkpoint/best_ckpt.pt")
         # download model
         # file_helper.ModelDownload(self.ckpt_path)
+        # keep track of recognized ids
+        self.recognized_ids = []
+        # initialize inference class
+        self.inf = inference.Inference(self.ckpt_path)
         
     def start(self):
 
@@ -56,36 +60,32 @@ class ImageProcessingServer:
                 cv2.imwrite(raw_image_path, frame)
 
                 # run inference
-                inf = inference.Inference(self.ckpt_path)
-                self.label, self.cord_thres = inf.run_inference(raw_image_path) 
+                self.label, self.cord_thres = self.inf.run_inference(raw_image_path, self.recognized_ids) 
 
                 # draw bounding box if image detected
                 if self.label != "-1" and self.label != "41":
+                    # add to recognized ids
+                    self.recognized_ids.append(self.label)
                     print(f"Detect Image ID: {self.label}")
-                    inf.draw_bounding(self.label, self.cord_thres, raw_image_path, self.dir_path)
-                    self.image_hub.send_reply(self.label)
+                    self.inf.draw_bounding(self.label, self.cord_thres, raw_image_path, self.dir_path)
                 else:
                     if self.label == "41":
                         print("Detected Bullseye")
                     else:
                         print("No image is being detected")
-                    self.image_hub.send_reply("-1")
+                
+                self.image_hub.send_reply(self.label)
+
             except KeyboardInterrupt as e:
                 print("[Image Server] Ctrl-C")
                 break
-        self.end()
+            
 
     def end(self):
         print('[Image Server] Stopping image processing server')
         self.image_hub.send_reply('Done')
         # send_reply disconnects the connection
         print('[Image Server] Sent reply and disconnected at time: ' + str(datetime.now()) + '\n')
-
-        # TODO: return? to android if detected
-        # if self.label != "-1":
-        #     return self.label
-        # else: 
-        #     return "NO DETECTION"
 
 # Standalone testing.
 if __name__ == '__main__':
