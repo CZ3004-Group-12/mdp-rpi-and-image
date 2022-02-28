@@ -15,30 +15,45 @@ class Inference:
         self.device = 'cpu'
         self.classes = self.model.names
 
-    def run_inference(self, img_path):
+    def run_inference(self, img_path, recognized_ids):
         print("------ Starting detection ------")
+        # default values
+        detected_img_id = "-1"
+        cords = []
+
         # Inference
         self.model.to(self.device)
         results = self.model(img_path)
         
         # get labels and coordinates
         labels, cord_thres = results.xyxyn[0][:, -1].numpy(), results.xyxyn[0][:, :-1].numpy()
+        
+        # read image to get size of image
+        img_taken = cv2.imread(img_path)
+        x_shape, y_shape = img_taken.shape[1], img_taken.shape[0]
 
         # if labels detected
         if len(labels) > 0:
-            max_thres = 0
-            # get max thres
+            max_area = 0
+
+            # get bigger area
             for idx, detected in enumerate(cord_thres):
-                if detected[-1] > max_thres:
-                    max_thres = detected[-1]
+                # get coords 
+                x1, y1, x2, y2 = int(detected[0]*x_shape), int(detected[1]*y_shape), int(detected[2]*x_shape), int(detected[3]*y_shape)
+                # get area
+                x_len = abs(x2-x1)
+                y_len = abs(y2-y1)
+                area = x_len*y_len
+                # get label
+                curr_id = self.classes[int(labels[idx])]
+                
+                # if bigger than current, then reassign
+                if (area > max_area) and (curr_id not in recognized_ids) and (curr_id != "41"):
+                    max_area = area
                     # get class
-                    detected_img_id = self.classes[int(labels[idx])]
+                    detected_img_id = curr_id
                     cords = detected
 
-            # if threshold less than 0.75, then counted as not detected, else just leave it as it is
-            if max_thres < 0.75:
-                detected_img_id = "-1"
-                cords = [] 
         # if no labels detected
         else:
             detected_img_id = "-1"
