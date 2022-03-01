@@ -69,8 +69,7 @@ class MultiProcessing:
         if image_processing_server is not None:
             print("[Main] Running with Image Processing")
             self.image_queue = self.manager.Queue()
-            self.image_processing_server = image_processing_server
-            self.image_sender = imagezmq.ImageSender(connect_to=self.image_processing_server)
+            self.image_processing_server = image_processing_server 
             self.image_process = Process(target=self.image_processing, name="[Image Process]")
             self.process_list.add(self.image_process)
 
@@ -143,7 +142,8 @@ class MultiProcessing:
                 self.image_queue.get_nowait()
             print("[Main] Image Queue flushed")
             image = self.take_picture()
-            self.image_sender.send_image(0, image)
+            image_sender = imagezmq.ImageSender(connect_to=self.image_processing_server)
+            image_sender.send_image(0, image)
 
     def check_process_alive(self) -> None:
         while True:
@@ -522,7 +522,7 @@ class MultiProcessing:
 
     def image_processing(self) -> None:
         # initialize the ImageSender object with the socket address of the server
-
+        image_sender = imagezmq.ImageSender(connect_to=self.image_processing_server)
         while True:
             try:
                 if self.image_queue.empty():
@@ -533,7 +533,7 @@ class MultiProcessing:
                     start_time = datetime.now()
                     image_message =  self.image_queue.get_nowait()
                     print("[Main] Sending Image to Server.")
-                    reply = self.image_sender.send_image(self.image_count.value, image_message[0]).decode(FORMAT)
+                    reply = image_sender.send_image(self.image_count.value, image_message[0]).decode(FORMAT)
                     print(f'[Main] Time taken to process image: {str(datetime.now() - start_time)} seconds')
 
                     if reply != "-1": # Image is being detected.
