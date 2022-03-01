@@ -19,7 +19,7 @@ class MultiProcessing:
     Handles the communication between STM, Android, Algorithm and Image Processing Server.
     """    
     
-    def __init__(self, image_processing_server: str = None, android_on: bool = False, stm_on: bool = False, algo_on: bool = False, ultrasonic_on: bool = False, img_count: int = 5) -> None:
+    def __init__(self, image_processing_server: str = None, android_on: bool = False, stm_on: bool = False, algo_on: bool = False, ultrasonic_on: bool = False) -> None:
     
         """
         - Android   (o)
@@ -32,7 +32,7 @@ class MultiProcessing:
         self.process_list = set()
         self.mode  = Value('i', 0) # 0: Manual, 1: Explore, 2: Path
         self.stm_ready_to_recv  = Value('i', 1)
-        self.image_count = Value('i', img_count)
+        self.image_count = Value('i', 0)
         self.stm = self.android = self.algorithm = self.image_process = self.ultrasonic = None
 
         # STM
@@ -117,6 +117,26 @@ class MultiProcessing:
         if self.algorithm is not None: self.algorithm.disconnect_all()
         print("[Main] Multi Process Communication has successfully ended.")
 
+    # Restart all processes
+    def restart_explore(self) -> None:
+        
+        if self.stm is not None:
+            # Flush instructions & Reconnect
+            while not self.to_stm_message_queue.empty():
+                self.to_stm_message_queue.get_nowait()
+            print("[Main] - STM Message Queue has been flushed.")
+            self.reconnect_stm()
+
+        if self.algorithm is not None:
+            while not self.send_to_algorithm_process.empty():
+                self.send_to_algorithm_process.get_nowait()
+            print("[Main] Algorithm Message Queue flushed")
+
+        if self.android is not None:
+            while not self.to_android_message_queue.empty():
+                self.to_android_message_queue.get_nowait()
+            print("[Main] Android Message Queue flushed")
+
     def check_process_alive(self) -> None:
         while True:
             try:
@@ -171,12 +191,7 @@ class MultiProcessing:
                         continue
 
                     elif message == AndroidToRPI.STOP:
-                        if self.stm is not None:
-                            # Flush instructions & Reconnect
-                            while not self.to_stm_message_queue.empty():
-                                self.to_stm_message_queue.get_nowait()
-                            print("[Main] - STM Message Queue has been flushed.")
-                            self.reconnect_stm()
+                        self.restart_explore()
                         continue
                         
                     # Forward Android message to Algo
@@ -187,6 +202,7 @@ class MultiProcessing:
                             continue
                         # Set to explore mode
                         self.mode.value = 1
+                        self.image_count.value = len(message_list) - 3
                         self.to_algo_message_queue.put_nowait(self.format_message(ANDROID_HEADER, message))
                     else:
                         print("[Main] No Forwarding : Message from Android: {message}")
@@ -519,10 +535,12 @@ class MultiProcessing:
                         # Request for next moveset from Algorithm
                         self.to_algo_message_queue.put_nowait(self.format_message(RPI_HEADER, RPIToAlgorithm.REQUEST_ROBOT_NEXT))
                         self.image_count.value -= 1
+
                         # Exploration is done.
                         if self.image_count == 0:
                             self.to_android_message_queue.put_nowait(self.format_message(AND_HEADER + RPI_HEADER, RPIToAndroid.FINISH_EXPLORE))
-                            self.end()
+                            self.restart_explore()
+                            #self.end()
                         break
                     
                     no_of_tries += 1
