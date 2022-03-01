@@ -525,7 +525,7 @@ class MultiProcessing:
                     start_time = datetime.now()
                     image_message =  self.image_queue.get_nowait()
                     print("[Main] Sending Image to Server.")
-                    reply = image_sender.send_image(f"RPI Image", image_message[0]).decode(FORMAT)
+                    reply = image_sender.send_image(self.image_count.value, image_message[0]).decode(FORMAT)
                     print(f'[Main] Time taken to process image: {str(datetime.now() - start_time)} seconds')
 
                     if reply != "-1": # Image is being detected.
@@ -568,6 +568,7 @@ class MultiProcessing:
                 if no_of_tries != 0:
                     # Time to move forward and request next step.
                     self.mode.value = 1
+                    self.image_count.value -= 1
                     self.to_stm_message_queue.put_nowait([AlgorithmToSTM.FORWARD] * no_of_tries)
                     self.to_algo_message_queue.put_nowait(self.format_message(RPI_HEADER, RPIToAlgorithm.REQUEST_ROBOT_NEXT))
 
