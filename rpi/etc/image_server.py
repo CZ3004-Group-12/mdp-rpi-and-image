@@ -46,6 +46,7 @@ class ImageProcessingServer:
                 _, frame = self.image_hub.recv_image()
                 print('[Image Server] Connected and received frame at time: ' + str(datetime.now()))
 
+                print(self.recognized_ids)
                 identifier = str(time.time()).split('.')[0]
                 # form image file path for saving
                 raw_image_name = "img_" + identifier + ".jpg"
@@ -75,6 +76,8 @@ class ImageProcessingServer:
                         print("No image is being detected")
                 
                 self.image_hub.send_reply(self.label)
+                if _ == 1:
+                    self.recognized_ids = []
 
             except KeyboardInterrupt as e:
                 print("[Image Server] Ctrl-C")

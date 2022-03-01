@@ -24,6 +24,13 @@ BACKWARD_DISTANCE = 20.3
 BACKWARD_ANGLE = "x0194"
 
 """
+    Outdoors
+    W       = ["Q0013x0140".encode()]
+    S       = ["D0013x0140".encode()]
+    Q       = ["Q0105x2585".encode(), "S0019x0000".encode()]
+    E       = ["E0107x2242".encode(), "S0023x0000".encode()]
+    A       = ["W0027x0000".encode(), "A0117x2295".encode()]
+    D       = ["W0023x0000".encode(), "D0117x2295".encode()]
     Lab Movement calibration.
     W       = ["Q0014x0194".encode()]
     S       = ["D0014x0194".encode()]
@@ -36,12 +43,12 @@ class STM_MOVESET:
     # Command | D Flag | Distance | Direction | Angle Flag | Angle
     SETUP_I = "I0900x0100".encode()
     SETUP_P = "P1200x1100".encode()
-    W       = ["Q0013x0140".encode()]
-    S       = ["D0013x0140".encode()]
-    Q       = ["Q0105x2585".encode(), "S0019x0000".encode()]
-    E       = ["E0107x2242".encode(), "S0023x0000".encode()]
-    A       = ["W0027x0000".encode(), "A0117x2295".encode()]
-    D       = ["W0023x0000".encode(), "D0117x2295".encode()]
+    W       = ["Q0014x0194".encode()]
+    S       = ["D0014x0194".encode()]
+    Q       = ["Q0101x2605".encode(), "S0019x0000".encode()]
+    E       = ["E0104x2330".encode(), "S0022x0000".encode()]
+    A       = ["W0022x0000".encode(), "A0114x2585".encode()]
+    D       = ["W0020x0000".encode(), "D0109x2400".encode()]
     DONE    = "0000000000".encode()
     SETUP_DONE   = "00000000000000000000".encode()
     
