@@ -15,7 +15,6 @@ parser.add_argument(
 parser.add_argument( '--stm', type=bool, default=False, required=False,)
 parser.add_argument( '--android', type=bool, default=False, required=False,)
 parser.add_argument( '--algo', type=bool, default=False, required=False,)
-parser.add_argument( '--img_count', type=int, default=5, required=False,)
 
 def init():
     multi_process = None
@@ -28,8 +27,7 @@ def init():
             image_processing_server=server_host, 
             algo_on=args.algo, 
             android_on=args.android, 
-            stm_on=args.stm,
-            img_count=args.img_count
+            stm_on=args.stm
             )
         multi_process.start()
 
