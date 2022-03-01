@@ -29,13 +29,13 @@ class ImageProcessingServer:
         self.ckpt_path = os.path.join(self.dir_path, "checkpoint/best_ckpt.pt")
         # download model
         # file_helper.ModelDownload(self.ckpt_path)
-        # keep track of recognized ids
-        self.recognized_ids = []
+        
         # initialize inference class
         self.inf = inference.Inference(self.ckpt_path)
         
     def start(self):
-
+        # keep track of recognized ids
+        self.recognized_ids = []
         print('[Image Server] Started image processing server')
         
         while True:

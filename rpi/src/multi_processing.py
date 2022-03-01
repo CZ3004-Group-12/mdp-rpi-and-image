@@ -476,6 +476,8 @@ class MultiProcessing:
             # initialize the camera and grab a reference to the raw camera capture
             camera = PiCamera(resolution=(IMAGE_WIDTH, IMAGE_HEIGHT))
             camera.rotation = 0
+            # camera.brightness = 50
+            camera.iso = 700
             rawCapture = PiRGBArray(camera)
             # allow the camera to warmup
             time.sleep(0.1)

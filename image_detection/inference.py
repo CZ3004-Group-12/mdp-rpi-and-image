@@ -20,6 +20,7 @@ class Inference:
         # default values
         detected_img_id = "-1"
         cords = []
+        thres = 0
 
         # Inference
         self.model.to(self.device)
@@ -49,6 +50,7 @@ class Inference:
                 
                 # if bigger than current, then reassign
                 if (area > max_area) and (curr_id not in recognized_ids) and (curr_id != "41"):
+                    thres = detected[-1]
                     max_area = area
                     # get class
                     detected_img_id = curr_id
@@ -58,6 +60,10 @@ class Inference:
         else:
             detected_img_id = "-1"
             cords = [] 
+        
+        if thres <= 0.75:
+            detected_img_id = "-1"
+            cords = []
         
         # return results
         return detected_img_id, cords
