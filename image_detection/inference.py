@@ -51,19 +51,16 @@ class Inference:
                 # if bigger than current, then reassign
                 if (area > max_area) and (curr_id not in recognized_ids) and (curr_id != "41"):
                     thres = detected[-1]
-                    max_area = area
-                    # get class
-                    detected_img_id = curr_id
-                    cords = detected
-
+                    # only store if threshold bigger than 0.75
+                    if thres >= 0.75:
+                        max_area = area
+                        # get class
+                        detected_img_id = curr_id
+                        cords = detected
         # if no labels detected
         else:
             detected_img_id = "-1"
             cords = [] 
-        
-        if thres <= 0.75:
-            detected_img_id = "-1"
-            cords = []
         
         # return results
         return detected_img_id, cords
@@ -76,6 +73,13 @@ class Inference:
 
         # get x,y axes of bounding box
         x_shape, y_shape = img_taken.shape[1], img_taken.shape[0]
+
+        print("X_SHAPE:", x_shape)
+        print("Y_SHAPE:", y_shape)
+
+        # get halfway point of image
+        x_half = int(x_shape/2)
+
         x1, y1, x2, y2 = int(cord_thres[0]*x_shape), int(cord_thres[1]*y_shape), int(cord_thres[2]*x_shape), int(cord_thres[3]*y_shape)
         bgr = (128, 24, 33)
 
@@ -86,12 +90,22 @@ class Inference:
         desc = id_dict[label]
         id_str =  "Image ID=" + label
 
-        # draw bg for text 
-        cv2.rectangle(img_taken, (x2+20, y1), (x2 + 250, y1 + 100), (255,255,255), -1)
-
-        # draw text
-        cv2.putText(img_taken, desc, (x2+40, y1+40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
-        cv2.putText(img_taken, id_str, (x2+40, y1+80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
+        # if bounding box to left of image, draw labels on right
+        if x1 < x_half:
+            # draw bg for text 
+            cv2.rectangle(img_taken, (x2+20, y1), (x2+250, y1+100), (255,255,255), -1)
+            # draw text
+            cv2.putText(img_taken, desc, (x2+40, y1+40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
+            cv2.putText(img_taken, id_str, (x2+40, y1+80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
+        # if bounding box to right of image, draw labels on left
+        elif x1 >= x_half:
+            # draw bg for text 
+            cv2.rectangle(img_taken, (x1-20, y1), (x1-250, y1+100), (255,255,255), -1)
+            # size of background for test
+            bg_length = 250-20 
+            # draw text
+            cv2.putText(img_taken, desc, (x1-bg_length, y1+40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
+            cv2.putText(img_taken, id_str, (x1-bg_length, y1+80), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
 
         # create output folder if not exists
         directory_detected = os.path.join(dir_path, "images_detected")

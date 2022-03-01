@@ -7,7 +7,7 @@ from datetime import datetime
 
 from rpi.misc.config import *
 from image_detection import inference
-from image_detection.utils import file_helper
+from image_detection.utils import file_helper, display_images
 
 
 class CustomImageHub(ImageHub):
@@ -27,9 +27,8 @@ class ImageProcessingServer:
         self.image_hub = CustomImageHub()
         self.dir_path = os.path.dirname(os.path.realpath(__file__))
         self.ckpt_path = os.path.join(self.dir_path, "checkpoint/best_ckpt.pt")
-        # download model
+        # download model if not downloaded
         # file_helper.ModelDownload(self.ckpt_path)
-        
         # initialize inference class
         self.inf = inference.Inference(self.ckpt_path)
         
@@ -43,10 +42,10 @@ class ImageProcessingServer:
                 print('[Image Server] Waiting for image from RPi')
 
                 # receive RPi name and frame from the RPi and acknowledge the receipt
-                _, frame = self.image_hub.recv_image()
+                remaining_count, frame = self.image_hub.recv_image()
                 print('[Image Server] Connected and received frame at time: ' + str(datetime.now()))
 
-                print(self.recognized_ids)
+                print("Recognized IDS:", self.recognized_ids)
                 identifier = str(time.time()).split('.')[0]
                 # form image file path for saving
                 raw_image_name = "img_" + identifier + ".jpg"
@@ -76,13 +75,16 @@ class ImageProcessingServer:
                         print("No image is being detected")
                 
                 self.image_hub.send_reply(self.label)
-                if _ == 1:
+
+                # if last obstacle detected, reset recognized list and display images
+                if (remaining_count == 1 and self.label != "-1") or (remaining_count == 0):
                     self.recognized_ids = []
+                    detected_path = os.path.join(self.dir_path, "images_detected")
+                    display_images.get_results(detected_path)
 
             except KeyboardInterrupt as e:
                 print("[Image Server] Ctrl-C")
                 break
-            
 
     def end(self):
         print('[Image Server] Stopping image processing server')
