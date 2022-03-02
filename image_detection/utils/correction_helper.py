@@ -43,9 +43,10 @@ class CorrectionHelper():
     '''
     def calc_position(self):
         x_half = int(self.x_shape/2)
-        if self.x1 < x_half:
+        mid_x = self.x1 + ((self.x2-self.x1)/2)
+        if mid_x < x_half:
             return "LEFT"
-        elif self.x1 > x_half:
+        elif mid_x > x_half:
             return "RIGHT"
         else: 
             return "CENTRE"     
