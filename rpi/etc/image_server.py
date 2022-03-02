@@ -79,8 +79,7 @@ class ImageProcessingServer:
                 # if last obstacle detected, reset recognized list and display images
                 if (remaining_count == 1 and self.label != "-1") or (remaining_count == 0):
                     self.recognized_ids = []
-                    detected_path = os.path.join(self.dir_path, "images_detected")
-                    display_images.get_results(detected_path)
+                    display_images.get_results(self.dir_path)
 
             except KeyboardInterrupt as e:
                 print("[Image Server] Ctrl-C")

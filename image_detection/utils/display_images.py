@@ -1,44 +1,79 @@
 import os
 import tkinter as tk 
 import math
+import numpy as np 
+import cv2
 from PIL import Image, ImageTk
 
-# TODO: Confirm width, height
-def display_results(dir_path):
+def create_results(dir_path):
     width = 600
     height= 480
     
-    number = 0
+    directory_images_final = os.path.join(dir_path, "final")
+    if not os.path.exists(directory_images_final):
+        os.makedirs(directory_images_final)
 
+    # get detected images path
+    detect_path = f"{dir_path}/images_detected/"
+
+    # get total images in folder
     image_count = 0
-    
-    for file in os.listdir(dir_path):
+    for file in os.listdir(detect_path):
         image_count += 1
 
     each_row_count = math.ceil(image_count/2)
 
-    for file in os.listdir(dir_path):
-        filename = os.fsdecode(file)
-        # filename = f"{dir_path}/{number}.jpg"
-        img = Image.open(f"{dir_path}/{filename}")
+    # get first row first image
+    first_file_name = os.listdir(detect_path)[0]
+    vis_row_1 = cv2.imread(f"{detect_path}/{first_file_name}")
+    vis_row_1 = cv2.resize(vis_row_1, (width, height))
 
-        # resize image
-        resize_img = img.resize((width, height))
-        final_img = ImageTk.PhotoImage(resize_img)
-        
-        label = tk.Label(image=final_img)
-        label.photo = final_img 
-        
-        # display in 2 rows
-        number+=1
-        if number <= each_row_count:
-            label.grid(row=1, column=number)
-        else:
-            label.grid(row=2, column=number-each_row_count)
-        
+    # get second row second image
+    second_file_name = os.listdir(detect_path)[each_row_count]
+
+    vis_row_2 = cv2.imread(f"{detect_path}/{second_file_name}")
+    vis_row_2 = cv2.resize(vis_row_2, (width, height))
+
+    # stitch other images in rows
+    for idx, file in enumerate(os.listdir(detect_path)):
+        if idx != 0:
+            if idx < each_row_count:
+                add_img = cv2.imread(f"{detect_path}/{file}")
+                add_img = cv2.resize(add_img, (width, height))
+                vis_row_1 = np.concatenate((vis_row_1, add_img), axis=1)
+                cv2.imwrite(f"{dir_path}/final/out_row_1.jpg", vis_row_1)
+                
+            else:
+                if idx != each_row_count:
+                    add_img = cv2.imread(f"{detect_path}/{file}")
+                    add_img = cv2.resize(add_img, (width, height))
+                    vis_row_2 = np.concatenate((vis_row_2, add_img), axis=1)
+                    cv2.imwrite(f"{dir_path}/final/out_row_2.jpg", vis_row_2)
+
+    # if odd number, means need to pad bottom image
+    if image_count != (each_row_count*2):
+        btm_img = cv2.imread(f"{dir_path}/final/out_row_2.jpg")
+        btm_img = cv2.copyMakeBorder(btm_img, 0, 0, 0, width, cv2.BORDER_CONSTANT, value=[255, 255, 255])
+        cv2.imwrite(f"{dir_path}/final/out_row_2.jpg", btm_img)
+
+    # get top and bottom image
+    top_img = cv2.imread(f"{dir_path}/final/out_row_1.jpg")
+    btm_img = cv2.imread(f"{dir_path}/final/out_row_2.jpg")
+    # stich 2 rows together
+    final_img = np.concatenate((top_img, btm_img), axis=0)
+    cv2.imwrite(f"{dir_path}/final/final_out.jpg", final_img)
+
+    
 def get_results(dir_path):
     root = tk.Tk()
-    display_results(dir_path)
+    
+    # create stiched images
+    create_results(dir_path)
+    # open tkinter window with all images
+    display_img = ImageTk.PhotoImage(Image.open(f"{dir_path}/final/final_out.jpg"))
+    panel = tk.Label(root, image = display_img)
+    panel.pack(side="bottom", fill="both", expand="yes")
+
     root.mainloop()
 
 if __name__ == '__main__':
