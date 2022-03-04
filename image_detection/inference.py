@@ -3,7 +3,8 @@ import torch
 import cv2
 import time
 
-from image_detection.config.config import IMAGE_IDS
+# from image_detection.config.config import IMAGE_IDS
+from config.config import IMAGE_IDS
 
 class Inference:
     '''
@@ -21,6 +22,7 @@ class Inference:
         detected_img_id = "-1"
         cords = []
         thres = 0
+        bbox = []
 
         # Inference
         self.model.to(self.device)
@@ -41,6 +43,7 @@ class Inference:
             for idx, detected in enumerate(cord_thres):
                 # get coords 
                 x1, y1, x2, y2 = int(detected[0]*x_shape), int(detected[1]*y_shape), int(detected[2]*x_shape), int(detected[3]*y_shape)
+                bbox = [x1, y1, x2, y2]
                 # get area
                 x_len = abs(x2-x1)
                 y_len = abs(y2-y1)
@@ -63,7 +66,7 @@ class Inference:
             cords = [] 
         
         # return results
-        return detected_img_id, cords
+        return detected_img_id, cords, x_shape, y_shape, bbox
 
     def draw_bounding(self, label, cord_thres, img_path, dir_path):
         id_dict = IMAGE_IDS
@@ -128,8 +131,21 @@ if __name__ == "__main__":
     start_time = time.time()
     
     inf = Inference("best_ckpt.pt")
-    img_path = "test_images/11.jpg"
-    label, cord_thres = inf.run_inference(img_path) 
+    img_path = "test_images/img_76_0_first_bg.jpg"
+    label, cord_thres = inf.run_inference(img_path, []) 
+
+    # read image
+    img_taken = cv2.imread(img_path)
+
+    # get x,y axes of bounding box
+    x_shape, y_shape = img_taken.shape[1], img_taken.shape[0]
+
+    print("X_SHAPE:", x_shape)
+    print("Y_SHAPE:", y_shape)
+
+    x1, y1, x2, y2 = int(cord_thres[0]*x_shape), int(cord_thres[1]*y_shape), int(cord_thres[2]*x_shape), int(cord_thres[3]*y_shape)
+    print(f"X1: {x1},  X2: {x2}")
+    print(f"Y1: {y1}, Y2: {y2}")
 
     # draw bounding box
     # if label != "-1":

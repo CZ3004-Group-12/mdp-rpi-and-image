@@ -13,21 +13,3 @@ IMAGE_IDS = {
         }
 
 MODEL_URL = "https://drive.google.com/uc?id=1EIWIDC2ntZ3D9DE9vWOip7c-6T_0YrT-"
-
-# in the formats {"height": "distance"}
-# so when calling, if bbox is bigger than height, then it is considered 
-# this distance away
-DISTANCE_BOX_SIZE = {
-    190: 15,
-    170: 20,
-    150: 25,
-    133: 30, 
-    117: 35,
-    95: 40,
-    78: 50,
-    72: 55,
-    64: 60,
-    61: 65,
-    58: 70,
-    0: 75,
-}
