@@ -8,8 +8,8 @@ For sub-systems communication purposes.
 NEWLINE = "\n".encode()
 AND_HEADER = "&".encode()
 COMMA_SEPARATOR = ",".encode()
+SLASH_SEPARATOR = "/".encode() # ROBOT/x/y
 MESSAGE_SEPARATOR = "|".encode()
-COMMAND_SEPARATOR = "/".encode() # ROBOT/x/y
 
 RPI_HEADER = 'RPI|'.encode()
 STM_HEADER = 'STM|'.encode()

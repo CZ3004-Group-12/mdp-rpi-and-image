@@ -2,7 +2,7 @@
 import time
 import serial
 from misc.protocols import STM_PROTOCOL
-from misc.config import SERIAL_PORT, BAUD_RATE, FORMAT
+from misc.config import SERIAL_PORT, BAUD_RATE
 
 class STM:
     def __init__(self, serial_port=SERIAL_PORT, baud_rate=BAUD_RATE) -> None:
@@ -20,7 +20,7 @@ class STM:
                 if self.stm is not None:
                     print(f"[STM] Established connection on Serial Port: {self.serial_port} Baud Rate: {self.baud_rate}")
                     self.send(STM_PROTOCOL.SETUP_I)
-                    time.sleep(1)
+                    time.sleep(0.5)
                     self.send(STM_PROTOCOL.SETUP_P)
                     retry = False
             except IOError as error:

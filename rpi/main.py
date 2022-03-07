@@ -12,9 +12,9 @@ parser.add_argument(
     required=False,
     choices=IMAGE_PROCESSING_SERVER_URLS.keys())
 
-parser.add_argument( '--stm', type=bool, default=False, required=False,)
-parser.add_argument( '--algo', type=bool, default=False, required=False,)
-parser.add_argument( '--android', type=bool, default=False, required=False,)
+parser.add_argument( '--stm', type=bool, default=True, required=False,)
+parser.add_argument( '--algo', type=bool, default=True, required=False,)
+parser.add_argument( '--android', type=bool, default=True, required=False,)
 parser.add_argument( '--env', type=bool, default="outdoor", required=False,)
 
 def init():
