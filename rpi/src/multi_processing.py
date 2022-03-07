@@ -563,6 +563,7 @@ class MultiProcessing:
 
                         # Request for next moveset from Algorithm
                         self.to_algo_message_queue.put_nowait(RPI_HEADER + msg_to_send)
+                        no_of_tries = 0
                         break
 
                     no_of_tries += 1

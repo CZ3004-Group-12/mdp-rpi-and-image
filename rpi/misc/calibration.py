@@ -32,7 +32,7 @@ class Calibration:
             self.E = ["E0104x2330".encode(), "S0022x0000".encode()]
             self.A = ["W0022x0000".encode(), "A0114x2585".encode()]
             self.D = ["W0020x0000".encode(), "D0109x2400".encode()]
-
+        
         else:
             self.W = ["Q0014x0194".encode()]
             self.S = ["D0014x0194".encode()]

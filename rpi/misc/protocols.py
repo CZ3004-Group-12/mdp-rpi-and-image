@@ -5,6 +5,7 @@ For sub-systems communication purposes.
 
 # ROBOT/NEXT/3,3,90 or ROBOT/NEXT/NIL
 
+
 NEWLINE = "\n".encode()
 AND_HEADER = "&".encode()
 COMMA_SEPARATOR = ",".encode()
@@ -25,6 +26,15 @@ class COMMAND_LIST:
     FL = "FL".encode()
     BR = "BR".encode()
     BL = "BL".encode()
+
+class STM_TASK2:
+    IR = "S".encode()
+    BRAKE = "B".encode() # Brake.
+    FORWARD = "K".encode()  # Move forward no stoage.
+    TURN_LEFT = "I".encode() # Turn left
+    TURN_RIGHT = "U".encode() # 180 turn
+    
+    MESSAGES = {IR, BRAKE, FORWARD, TURN_LEFT, TURN_RIGHT}
 
 class STM_PROTOCOL:
     SETUP_I = "I0900x0100".encode()
