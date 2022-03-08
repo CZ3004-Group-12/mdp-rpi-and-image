@@ -6,8 +6,8 @@ import cv2
 from PIL import Image, ImageTk
 
 def create_results(dir_path):
-    width = 600
-    height= 480
+    width = 450
+    height= 360
     
     directory_images_final = os.path.join(dir_path, "final")
     if not os.path.exists(directory_images_final):
@@ -77,4 +77,5 @@ def get_results(dir_path):
     root.mainloop()
 
 if __name__ == '__main__':
-    get_results()
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    get_results(dir_path)
