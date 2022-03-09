@@ -16,6 +16,7 @@ parser.add_argument( '--stm', type=bool, default=True, required=False,)
 parser.add_argument( '--algo', type=bool, default=True, required=False,)
 parser.add_argument( '--android', type=bool, default=True, required=False,)
 parser.add_argument( '--env', type=bool, default="outdoor", required=False,)
+parser.add_argument( '--us', type=bool, default=False, required=False,)
 
 def init():
     multi_process = None
@@ -25,10 +26,11 @@ def init():
         server_host = IMAGE_PROCESSING_SERVER_URLS[args.img_server] if args.img_server in IMAGE_PROCESSING_SERVER_URLS else None
         multi_process = MultiProcessing(
             image_processing_server=server_host, 
-            env=args.env,
+            android_on=args.android, 
             stm_on=args.stm,
             algo_on=args.algo, 
-            android_on=args.android, 
+            env=args.env,
+            ultrasonic_on=args.us,
             )
         multi_process.start()
 

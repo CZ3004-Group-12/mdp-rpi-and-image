@@ -35,8 +35,11 @@ class MultiProcessing:
         self.mode  = Value('i', 0) # 0: Manual, 1: Explore, 2: Path
         self.image_count = Value('i', 0)
         self.stm_ready_to_recv  = Value('i', 1) # Represent if STM is ready to receive.
-        self.cur_obstacle_coord = Value(c_char_p, b"0-0")
-        self.target_position_coord = Value(c_char_p, b"(0, 0, 0)")
+        self.coord = self.manager.dict()
+        self.coord['obstacle'] = b"0-0"
+        self.coord['target'] = b"(0, 0, 0)"
+        #self.cur_obstacle_coord = Value(c_char_p, b"0-0")
+        #self.target_position_coord = Value(c_char_p, b"(0, 0, 0)")
         self.stm = self.android = self.algorithm = self.image_process = self.ultrasonic = None
 
         # STM
@@ -120,7 +123,7 @@ class MultiProcessing:
             while not self.to_stm_message_queue.empty():
                 self.to_stm_message_queue.get_nowait()
             print("[Main] - STM Message Queue has been flushed.")
-            self.reconnect_stm()
+            # self.reconnect_stm()
 
         if self.algorithm is not None:
             while not self.to_algo_message_queue.empty():
@@ -131,7 +134,7 @@ class MultiProcessing:
             while not self.to_android_message_queue.empty():
                 self.to_android_message_queue.get_nowait()
             print("[Main] Android Message Queue flushed")
-
+        
         if self.image_process is not None:
             while not self.image_queue.empty():
                 self.image_queue.get_nowait()
@@ -140,7 +143,8 @@ class MultiProcessing:
             image = self.take_picture()
             image_sender = imagezmq.ImageSender(connect_to=self.image_processing_server)
             image_sender.send_image(0, image)
-
+        print("[Main] Explore Restarted.")
+        
     def check_process_alive(self) -> None:
         while True:
             try:
@@ -187,8 +191,10 @@ class MultiProcessing:
                         if self.stm is None:
                             print("[Main] No Forwarding, as STM is not set-up.")
                             continue
+                        
                         # Set to manual mode -> Manual movement from android.
                         self.mode.value = 0
+                        print(f"Test Case 4: {AndroidToSTM.MESSAGES[message]}")
                         self.to_stm_message_queue.put_nowait(AndroidToSTM.MESSAGES[message])
                         continue
 
@@ -270,9 +276,9 @@ class MultiProcessing:
 
                 if raw_message is None: continue
 
-                for message in raw_message.split(MESSAGE_SEPARATOR):
+                for raw in raw_message.split(MESSAGE_SEPARATOR):
                     
-                    message = message.split(SLASH_SEPARATOR)
+                    message = raw.split(SLASH_SEPARATOR)
 
                     # MOVEMENTS/10-9/B,B,B,FL,F,F,F,F,F,FL,B,B,F,F,F,BR,F,F,F
                     if message[0] in AlgorithmToSTM.MESSAGES:
@@ -281,8 +287,8 @@ class MultiProcessing:
                             continue
                         # MOVEMENTS
                         if message[0] == AlgorithmToSTM.MOVEMENTS:
-                            self.cur_obstacle_coord.value = message[1]
-                            print(f"[Main] - Current Target Obstacle: {message[1]}")
+                            self.coord['obstacle'] = message[1]
+                            print(f"[Main] - Current Target Obstacle: {self.coord['obstacle']}")
                             self.to_stm_message_queue.put_nowait(message[2].split(COMMA_SEPARATOR))
                         else:    
                             print("[Main] Algorithm To STM Command Type not recognised.")
@@ -293,9 +299,9 @@ class MultiProcessing:
                             continue
                         if message[0] == AlgorithmToAndroid.ROBOT:
                             # Keept track of the target position, for calibration purposes.
-                            self.target_position_coord.value = message[-1]
+                            self.coord['target'] = message[-1]
                             # Relay raw message to android team.
-                            self.to_android_message_queue.put_nowait(AND_HEADER + ALGORITHM_HEADER + message)
+                            self.to_android_message_queue.put_nowait(AND_HEADER + ALGORITHM_HEADER + raw)
                     # Take picture of obstacle manually.
                     elif message[0] == AlgorithmToRPI.OBSTACLE:
                             image = self.take_picture()
@@ -364,12 +370,12 @@ class MultiProcessing:
                     if message is None or message is STM_PROTOCOL.SETUP_DONE:
                         continue
                     # 
-                    if message not in STM_PROTOCOL.MESSAGES:
-                        print("[Main] Command is not recognised under STM protocol. Please try again.")
-                        continue
+                    #if message not in STM_PROTOCOL.MESSAGES:
+                     #   print("[Main] Command is not recognised under STM protocol. Please try again.")
+                      #  continue
                     # STM is ready to receive message.
-                    if message == STM_PROTOCOL.DONE:
-                        time.sleep(.05)
+                    if int(message) == 0:
+                        time.sleep(.1)
                         self.stm_ready_to_recv.value = 1
                         print(f"[Main] Receive from STM: {message}")
                     else:
@@ -391,10 +397,11 @@ class MultiProcessing:
                     continue
                 
                 message = self.to_stm_message_queue.get_nowait()
+                print(f"Ahh {message}")
                 # E.g. Movement message -> [B, B, BR, F]
                 if isinstance(message, list):
                     commands, commands_len = [], []
-                    index, msg_len = 0, 0, len(message)
+                    index, msg_len = 0, len(message)
                     # Truncating and mapping movement from [B, B, B, BR] -> [[Sxxxxxx], [Dxxx, Sxxx]]
                     # Reason for commands_len -> need send Android how many unit of movement instead.
                     while index < msg_len:
@@ -422,19 +429,19 @@ class MultiProcessing:
                     for index, command in enumerate(commands):
                         # Send command len to android.
                         if self.mode.value == 1:
-                            print("[Main] - Send Android")
+                            print("[Main] Send Android")
                             self.to_android_message_queue.put_nowait(AND_HEADER + STM_HEADER + STMToAndroid.DONE + str(commands_len[index]).encode())
                         
                         # Send bundled instruction like BR is actually Turn right then Reverse.
                         for i in range(len(command)):
                             while self.stm_ready_to_recv.value == 0:
-                                pass
+                                continue
                             self.stm_ready_to_recv.value = 0
                             self.stm.send(command[i])
                        
                         # Stall until STM completes the last movement.
                         while self.stm_ready_to_recv.value == 0:
-                            pass
+                            continue
                             
                         print("[Main] STM Completed one move.")
 
@@ -442,6 +449,7 @@ class MultiProcessing:
                     if self.mode.value == 1:
                         if self.image_process is None:
                             print('[Main] Image processing is not turned on')
+                            self.to_algo_message_queue.put_nowait(RPI_HEADER + RPIToAlgorithm.REQUEST_ROBOT_NEXT + RPIToAlgorithm.NIL)
                             continue                                
                         image = self.take_picture()
                         print('[Main] - RPI Picture Taken')
@@ -519,6 +527,7 @@ class MultiProcessing:
                     # Image is detected -> Time to notify Android + recalibration.
                     if reply != "-1": 
                         image_id, distance = reply.split("/")
+                        distance = float(distance)
                         print(f"[Main] Detected Image: {image_id}, Distance away: {distance}")
                         # Update Android with the image detected.
                         self.to_android_message_queue.put_nowait(AND_HEADER + RPI_HEADER + f"TARGET/{image_id}".encode(FORMAT))
@@ -533,7 +542,7 @@ class MultiProcessing:
                             
                         if distance >= self.calibration.MINUS_UNIT:
                             # Move Forward with the distance.
-                            self.to_stm_message_queue.put_nowait(self.calibration.bundle_movement(0, distance / self.calibration.FORWARD_DISTANCE))
+                            self.to_stm_message_queue.put_nowait(self.calibration.bundle_movement_raw(0, distance / self.calibration.FORWARD_DISTANCE))
 
                         # Stall until movement is done.
                         while self.stm_ready_to_recv.value != 1:
@@ -541,21 +550,26 @@ class MultiProcessing:
                         
                         # Calibrate check hoirzontal distance.
                         image = self.take_picture()
-                        reply = image_sender.send_image("calibrate", image).decode(FORMAT)
-                        grid_offset = reply.split("/")[1]
+                        grid_offset = int(image_sender.send_image("calibrate", image).decode(FORMAT))
+                        print(f"[Main] Grid offset: {grid_offset}")
                         
                         # Check if it's intentional misaligned.
-                        obstacle_x, obstacle_y = [int(x) for x in self.cur_obstacle_coord.value.decode(FORMAT).split("-")]
-                        perceived_x, perceived_y, perceived_angle = ast.literal_eval(self.target_position_coord.value.decode(FORMAT))
+                        print(self.coord)
+                        print(self.coord['obstacle'])
+                        print(self.coord['obstacle'].split(b"-"))
+                        obstacle_x, obstacle_y = [int(x) for x in self.coord['obstacle'].split(b"-")]
+                        print(f"[Main] Current x:{obstacle_x} y:{obstacle_y}")
+                        perceived_x, perceived_y, perceived_angle = ast.literal_eval(self.coord['target'].decode(FORMAT))
+                        print(f"[Main] Percevied x:{perceived_x} y:{perceived_y}, angle:{perceived_angle}")
                         msg_to_send = RPIToAlgorithm.REQUEST_ROBOT_NEXT + RPIToAlgorithm.NIL
 
                         if perceived_angle == 0 or perceived_angle == 180:
-                            actual_x = obstacle_x - grid_offset if perceived_angle == 0 else obstacle_x + grid_offset
+                            actual_x = int(obstacle_x - grid_offset) if perceived_angle == 0 else int(obstacle_x + grid_offset)
                             # Not an intentional offset by Algorithm
                             if actual_x != perceived_x:
                                 msg_to_send = RPIToAlgorithm.REQUEST_ROBOT_NEXT + f"{actual_x},{perceived_y},{perceived_angle}".encode()
                         else:
-                            actual_y = obstacle_y - grid_offset if perceived_angle == 90 else obstacle_y + grid_offset
+                            actual_y = int(obstacle_y - grid_offset) if perceived_angle == 90 else int(obstacle_y + grid_offset)
                             # Intentional offset by Algorithm
                             if actual_y != perceived_y:
                                 actual_coord = f"{perceived_x},{actual_y},{perceived_angle}".encode()

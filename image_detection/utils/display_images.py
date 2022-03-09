@@ -16,26 +16,29 @@ def create_results(dir_path):
     # get detected images path
     detect_path = f"{dir_path}/images_detected/"
 
+    # Removes .DS_STORE by macos
+    files = [f for f in os.listdir(detect_path) if not f.startswith('.')]
+
     # get total images in folder
     image_count = 0
-    for file in os.listdir(detect_path):
+    for file in files:
         image_count += 1
 
     each_row_count = math.ceil(image_count/2)
 
     # get first row first image
-    first_file_name = os.listdir(detect_path)[0]
+    first_file_name = files[0]
     vis_row_1 = cv2.imread(f"{detect_path}/{first_file_name}")
     vis_row_1 = cv2.resize(vis_row_1, (width, height))
 
     # get second row second image
-    second_file_name = os.listdir(detect_path)[each_row_count]
+    second_file_name = files[each_row_count]
 
     vis_row_2 = cv2.imread(f"{detect_path}/{second_file_name}")
     vis_row_2 = cv2.resize(vis_row_2, (width, height))
 
     # stitch other images in rows
-    for idx, file in enumerate(os.listdir(detect_path)):
+    for idx, file in enumerate(files):
         if idx != 0:
             if idx < each_row_count:
                 add_img = cv2.imread(f"{detect_path}/{file}")

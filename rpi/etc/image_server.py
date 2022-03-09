@@ -79,6 +79,7 @@ class ImageProcessingServer:
                         # check position after adjusting distance
                         ch = correction_helper.CorrectionHelper(x_shape, y_shape, bbox[0], bbox[2], bbox[1], bbox[3])
                         post = ch.calc_position()
+                        print(f"Coord Difference: {post}")
                         reply = post 
                 else:
                     if self.label == "41":
@@ -106,6 +107,9 @@ class ImageProcessingServer:
 
 # Standalone testing.
 if __name__ == '__main__':
-    print("[Image Server] Starting up Image Server")
-    image_hub = ImageProcessingServer()
-    image_hub.start()
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    display_images.get_results(dir_path)
+
+    #print("[Image Server] Starting up Image Server")
+    #image_hub = ImageProcessingServer()
+    #image_hub.start()

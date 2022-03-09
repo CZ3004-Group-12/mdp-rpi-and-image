@@ -46,7 +46,7 @@ class STM:
 
     def recv(self) -> str:
         try:
-            message = self.stm.readline().strip()
+            message = self.stm.read(10).strip()
             if len(message) > 0:
                 print(f"[STM] Message from STM: {message}")
             return message if len(message) else None

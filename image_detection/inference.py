@@ -4,7 +4,7 @@ import cv2
 import time
 
 # from image_detection.config.config import IMAGE_IDS
-from config.config import IMAGE_IDS
+from .config.config import IMAGE_IDS
 
 class Inference:
     '''

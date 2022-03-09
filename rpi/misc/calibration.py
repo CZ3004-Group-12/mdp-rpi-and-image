@@ -1,4 +1,4 @@
-from protocols import COMMAND_LIST
+from .protocols import COMMAND_LIST
 
 class Calibration:
     # Option 1 -> Initialise calibration, reference other protocol from multi-processing
@@ -11,14 +11,23 @@ class Calibration:
         self.FORWARD_DISTANCE  = 20.3
         self.BACKWARD_DISTANCE = 20.3
 
-        self.FORWARD_ANGLE = "x0194"
-        self.BACKWARD_ANGLE = "x0194"
+        self.FORWARD_ANGLE = "x0000"
+        self.BACKWARD_ANGLE = "x0000"
 
         self.calibration_map = {}
         self.W = self.S = self.Q = self.E = self.A = self.D = None
+        
+        if env == "g-outdoor":
+            self.W = ["W0013x0000".encode()]
+            self.S = ["S0013x0000".encode()]
+            self.Q = ["Q0105x2585".encode(), "S0019x0000".encode()]
+            self.E = ["E0107x2242".encode(), "S0023x0000".encode()]
+            self.A = ["W0027x0000".encode(), "A0117x2295".encode()]
+            self.D = ["W0023x0000".encode(), "D0117x2295".encode()]
 
         if env == "outdoor":
-            self.W = ["Q0013x0140".encode()]
+            self.W = ["W0013x0000".encode()]
+            #self.W = ["Q0013x0140".encode()]
             self.S = ["D0013x0140".encode()]
             self.Q = ["Q0105x2585".encode(), "S0019x0000".encode()]
             self.E = ["E0107x2242".encode(), "S0023x0000".encode()]
@@ -52,11 +61,15 @@ class Calibration:
 
     def bundle_movement(self, direction, unit) -> list:
         if direction == 0:
-            return [("Q" + str(int(unit * self.FORWARD_DISTANCE) - self.MINUS_UNIT).rjust(4, '0') + self.FORWARD_ANGLE).encode()]
+            return [("W" + str(int(unit * self.FORWARD_DISTANCE) - self.MINUS_UNIT).rjust(4, '0') + self.FORWARD_ANGLE).encode()]
         else:
             return [("S" + str(int(unit * self.BACKWARD_DISTANCE) - self.MINUS_UNIT).rjust(4, '0') + self.BACKWARD_ANGLE).encode()]
         
 
+    def bundle_movement_raw(self, direction, unit):
+        if direction == 0:
+            return ("W" + str(int(unit * self.FORWARD_DISTANCE) - self.MINUS_UNIT).rjust(4, '0') + self.FORWARD_ANGLE).encode()
+        else:
+            return ("S" + str(int(unit * self.BACKWARD_DISTANCE) - self.MINUS_UNIT).rjust(4, '0') + self.BACKWARD_ANGLE).encode()
         
-x = Calibration()
-print(x.FORWARD)
+        
