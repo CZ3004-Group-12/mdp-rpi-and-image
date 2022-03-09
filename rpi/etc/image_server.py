@@ -59,8 +59,12 @@ class ImageProcessingServer:
                 # save raw image
                 cv2.imwrite(raw_image_path, frame)
 
-                # run inference
-                self.label, self.cord_thres, x_shape, y_shape, bbox = self.inf.run_inference(raw_image_path, self.recognized_ids) 
+                if rpi_reply != "calibrate":
+                    # run inference
+                    self.label, self.cord_thres, x_shape, y_shape, bbox = self.inf.run_inference(raw_image_path, self.recognized_ids) 
+                else:
+                    # run inference
+                    self.label, self.cord_thres, x_shape, y_shape, bbox = self.inf.run_inference(raw_image_path, []) 
 
                 # draw bounding box if image detected
                 if self.label != "-1" and self.label != "41":
@@ -86,7 +90,7 @@ class ImageProcessingServer:
                         print("Detected Bullseye")
                     else:
                         print("No image is being detected")
-                    reply = "-1"
+                    reply = "NIL"
                 
                 self.image_hub.send_reply(reply)
 
