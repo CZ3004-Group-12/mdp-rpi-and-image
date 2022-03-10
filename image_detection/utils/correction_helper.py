@@ -1,3 +1,4 @@
+from matplotlib.pyplot import grid
 import numpy as np
 import math 
 
@@ -24,30 +25,34 @@ class CorrectionHelper():
         Returns distance
     '''
     def calc_dist(self): 
-        img_height = 450 
-        f_x = 786.94295638 
-        f_y = 790.81875267 
-        f = 3.04 
-        mid_y = f_y / f 
+        img_height = 610
+        # f_x = 786.94295638 
+        # f_y = 790.81875267 
+        # f = 3.04 
+        # mid_y = f_y / f 
         
         height = self.y2-self.y1
 
-        dist_from_camera = img_height * f / height/mid_y
+        # dist_from_camera = img_height * f / height/mid_y
+        f = 90
+        dist_from_camera = f * img_height / height
+        # to cm
+        dist_from_camera = dist_from_camera/10
+        print("dist cam:", dist_from_camera)
         
-        # change to mm? or dist from camera change to cm
-        dist_from_camera = dist_from_camera * 1000
+        # dist_from_camera = dist_from_camera * 1000
         camera_to_front = 23 
         dist_from_front_of_robot = dist_from_camera - camera_to_front
-        
+            
+        grid_dist = dist_from_front_of_robot - 23.5
+
         if dist_from_front_of_robot > 23.5:
-            grid_dist = dist_from_front_of_robot - 23.5 
-            no_grid = grid_dist // 5
-            cm_grids = no_grid * 5
+            grid_dist = grid_dist
         else:
-            cm_grids = 0
+            grid_dist = -grid_dist
 
         print(dist_from_camera, dist_from_front_of_robot)
-        return cm_grids
+        return grid_dist
 
     '''
         Calculate position of robot(left/right of robot),
@@ -161,12 +166,12 @@ class CorrectionHelper():
 
 if __name__ == '__main__':
     x_shape, y_shape, x1, x2, y1, y2, distance = 1024, 768, 230, 389, 458, 513, 50*10
-    x1 = 291
-    x2 = 431
-    y1 = 487
-    y2 = 607
+    x1 = 535
+    x2 = 618
+    y1 = 498
+    y2 = 575
     ch = CorrectionHelper(x_shape, y_shape, x1, x2, y1, y2)
     # ch.calc_angle()
 
-    print(ch.calc_position())
+    # print(ch.calc_position())
     print(ch.calc_dist())
