@@ -78,6 +78,7 @@ class ImageProcessingServer:
                         ch = correction_helper.CorrectionHelper(x_shape, y_shape, bbox[0], bbox[2], bbox[1], bbox[3])
                         dist = ch.calc_dist()
                         post = ch.calc_position()
+                        print("img_server dist: ", dist)
                         reply = f"{self.label}/{dist}"
                     else:
                         # check position after adjusting distance

@@ -36,6 +36,7 @@ class CorrectionHelper():
         # dist_from_camera = img_height * f / height/mid_y
         f = 90
         dist_from_camera = f * img_height / height
+        print("bbox height: ", height)
         # to cm
         dist_from_camera = dist_from_camera/10
         print("dist cam:", dist_from_camera)
@@ -51,7 +52,7 @@ class CorrectionHelper():
         else:
             grid_dist = -grid_dist
 
-        print(dist_from_camera, dist_from_front_of_robot)
+        print(grid_dist)
         return grid_dist
 
     '''

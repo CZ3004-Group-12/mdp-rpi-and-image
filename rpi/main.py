@@ -15,8 +15,7 @@ parser.add_argument(
 parser.add_argument( '--stm', type=bool, default=True, required=False,)
 parser.add_argument( '--algo', type=bool, default=True, required=False,)
 parser.add_argument( '--android', type=bool, default=True, required=False,)
-parser.add_argument( '--env', type=bool, default="outdoor", required=False,)
-parser.add_argument( '--us', type=bool, default=False, required=False,)
+parser.add_argument( '--env', type=str, default="outdoor", required=False,)
 
 def init():
     multi_process = None
@@ -30,7 +29,6 @@ def init():
             stm_on=args.stm,
             algo_on=args.algo, 
             env=args.env,
-            ultrasonic_on=args.us,
             )
         multi_process.start()
 

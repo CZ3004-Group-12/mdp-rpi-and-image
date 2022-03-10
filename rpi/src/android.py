@@ -71,7 +71,7 @@ class Android:
     def recv(self) -> None:
         try:
             message = self.client_socket.recv(ANDROID_SOCKET_BUFFER_SIZE).strip()
-            print(f'[Android] [FROM ANDROID] {message}')
+            # print(f'[Android] [FROM ANDROID] {message}')
             if message is None:
                 return None
             if len(message) > 0:
@@ -84,7 +84,7 @@ class Android:
       
     def send(self, message) -> None:
         try:
-            print(f'[Android] [TO ANDROID] {message}')
+            print(f'[Android] Message to Android: {message}')
             self.client_socket.send(message)
 
         except Exception as error:	

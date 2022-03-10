@@ -1,8 +1,8 @@
 
 import time
 import serial
-from misc.protocols import STM_MOVESET
-from misc.config import SERIAL_PORT, BAUD_RATE, FORMAT
+from misc.protocols import STM_PROTOCOL
+from misc.config import SERIAL_PORT, BAUD_RATE
 
 class STM:
     def __init__(self, serial_port=SERIAL_PORT, baud_rate=BAUD_RATE) -> None:
@@ -16,12 +16,12 @@ class STM:
         while retry:
             try:
                 print(f"[STM] Establishing Connection with STM on Serial Port: {self.serial_port} Baud Rate: {self.baud_rate}")
-                self.stm = serial.Serial(port=self.serial_port, baudrate=self.baud_rate, timeout=.1)
+                self.stm = serial.Serial(port=self.serial_port, baudrate=self.baud_rate, timeout=None)
                 if self.stm is not None:
                     print(f"[STM] Established connection on Serial Port: {self.serial_port} Baud Rate: {self.baud_rate}")
-                    self.send(STM_MOVESET.SETUP_I)
-                    time.sleep(1)
-                    self.send(STM_MOVESET.SETUP_P)
+                    self.send(STM_PROTOCOL.SETUP_I)
+                    time.sleep(0.5)
+                    self.send(STM_PROTOCOL.SETUP_P)
                     retry = False
             except IOError as error:
                 print(f"[Error] Failed to establish STM Connection: {str(error)}")
@@ -46,7 +46,7 @@ class STM:
 
     def recv(self) -> str:
         try:
-            message = self.stm.readline().strip()
+            message = self.stm.read(10).strip()
             if len(message) > 0:
                 print(f"[STM] Message from STM: {message}")
             return message if len(message) else None

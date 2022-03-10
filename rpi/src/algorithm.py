@@ -78,7 +78,7 @@ class Algorithm:
         try:
             message = self.client_socket.recv(ALGO_SOCKET_BUFFER_SIZE).strip()
             if len(message) > 0:
-                print(f'[Algo] Receive Message from Algo Client: {message}')
+                # print(f'[Algo] Receive Message from Algo Client: {message}')
                 return message
             return None
 

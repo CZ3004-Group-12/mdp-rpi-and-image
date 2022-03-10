@@ -19,33 +19,31 @@ from misc.calibration import *
 from .stm import STM
 from .android import Android
 from .algorithm import Algorithm
+from .ultrasonic import UltraSonic
 
 class MultiProcessing:
     """
     Handles the communication between STM, Android, Algorithm and Image Processing Server.
     """    
-    def __init__(self, image_processing_server: str, android_on: bool, stm_on: bool, algo_on: bool, env : str) -> None:
+    def __init__(self, image_processing_server: str, android_on: bool, stm_on: bool, algo_on: bool, ultrasonic_on: bool, env : str) -> None:
     
         print("[Main] __init__ Multi Processing Communication")
         self.manager = Manager()
-        self.calibration = Calibration(env) # Set calibration mode.
         print(f"[Main] Running Environment: {env}")
-        
-        # Coordinates for correction.
-        self.coord = self.manager.dict()
-        self.coord['obstacle'] = b"0-0"
-        self.coord['target'] = b"(0, 0, 0)"
+        self.calibration = Calibration(env)
 
         self.mode  = Value('i', 0) # 0: Manual, 1: Explore, 2: Path
         self.image_count = Value('i', 0)
         self.stm_ready_to_recv  = Value('i', 1) # Represent if STM is ready to receive.
-        self.stm_indv_move_done = Value('i', 1)
-        self.stm = self.android = self.algorithm = self.image_process = None
+        self.coord = self.manager.dict()
+        self.coord['obstacle'] = b"0-0"
+        self.coord['target'] = b"(0, 0, 0)"
+        self.stm = self.android = self.algorithm = self.image_process = self.ultrasonic = None
 
         # STM
         if stm_on:
             print("[Main] Running with STM interface.") 
-            self.stm = STM(env=env)
+            self.stm = STM()
             self.to_stm_message_queue = self.manager.Queue()
             self.recv_from_stm_process = Process(target=self.recv_from_stm, name="[STM Recv Process]")
             self.send_to_stm_process = Process(target=self.send_to_stm, name = "[STM Send Process]")
@@ -73,6 +71,11 @@ class MultiProcessing:
             self.image_processing_server = image_processing_server 
             self.image_process = Process(target=self.image_processing, name="[Image Process]")
 
+        if ultrasonic_on:
+            print("[Main] Running Ultrasonic interface.")
+            self.ultrasonic = UltraSonic()
+            self.recv_from_ultrasonic_process = Process(target=self.recv_from_ultrasonic, name="[Ultra Sonic Recv Process]")
+
     # Start all processes -> Called from main.py
     def start(self) -> None:
         try:
@@ -97,6 +100,10 @@ class MultiProcessing:
             # Image Processing.
             if self.image_processing_server is not None:
                 self.image_process.start()
+
+            #Ultra Sonic
+            if self.ultrasonic is not None:
+                self.recv_from_ultrasonic_process.start()
 
             print('[Main] Multi Process Communication has successfully started.')
 
@@ -139,9 +146,9 @@ class MultiProcessing:
             print("[Main] Image Queue has been flushed")
             # Reset Image detected in the Image Server.
             image = self.take_picture()
-            print("[Main] Taking Picture of Restarting Exploration.")
             image_sender = imagezmq.ImageSender(connect_to=self.image_processing_server)
             image_sender.send_image(0, image)
+
         print("===========================================================")
         
     def check_process_alive(self) -> None:
@@ -210,7 +217,7 @@ class MultiProcessing:
                             print("[Main] No Forwarding, as Algo is not set-up.")
                             continue
                         # Set to explore mode
-                        print("=============== [Main Starting Exploration] ===============")
+                        print("=============== [Main Starting Exploration ===============")
                         self.mode.value = 1
                         self.image_count.value = len(message_list) - 3
                         self.to_algo_message_queue.put_nowait(ANDROID_HEADER + message)
@@ -404,13 +411,11 @@ class MultiProcessing:
                 if self.to_stm_message_queue.empty() or self.stm_ready_to_recv.value != 1:
                     continue
                 
-                self.stm_indv_move_done.value = 0
                 message = self.to_stm_message_queue.get_nowait()
-                print(f"[Main] Raw Message from STM's MQ: {message}")
+                print(f"[Main] Sending To STM: {message}")
 
                 # E.g. Movement message -> [B, B, BR, F]
                 if isinstance(message, list):
-                    
                     commands, commands_len = [], []
                     index, msg_len = 0, len(message)
                     # Truncating and mapping movement from [B, B, B, BR] -> [[Sxxxxxx], [Dxxx, Sxxx]]
@@ -431,18 +436,13 @@ class MultiProcessing:
                             index = curIndex
                         else:
                             # For BR, BL, FR, FL -> Instant map no need for bundle.
-                            if message[index] not in self.calibration.calibration_map:
-                                print(f"[Main] Message not recognised for STM moveset: {message[index]}")
-                                break
                             commands.append(self.calibration.calibration_map[message[index]])
                             commands_len.append(1)
                             index += 1
 
                     # Passing the truncated commands to STM and Android.
                     # commands = [[Sxxxxxx], [Dxxx, Sxxx]]
-                    print(f"[Main] Converted commands: {commands}")
                     for index, command in enumerate(commands):
-                        
                         # Send command len to android.
                         if self.mode.value == 1:
                             self.to_android_message_queue.put_nowait(AND_HEADER + STM_HEADER + STMToAndroid.DONE + str(commands_len[index]).encode())
@@ -453,11 +453,12 @@ class MultiProcessing:
                             while self.stm_ready_to_recv.value != 1:
                                 continue
                             self.stm_ready_to_recv.value = 0
-                            time.sleep(0.25)
+                            time.sleep(0.15)
                             self.stm.send(command[i])
+                       
                         # Stall until STM completes the last movement.
-                        #while self.stm_ready_to_recv.value != 1:
-                        #    continue
+                        while self.stm_ready_to_recv.value != 1:
+                            continue
                             
                         print("[Main] STM Completed one move.")
 
@@ -470,23 +471,9 @@ class MultiProcessing:
                         image = self.take_picture()
                         print(f'[Main] First Picture Taken -> STM completed one movement.')
                         self.image_queue.put_nowait([image, f"{self.image_count.value}"])
-                    else:
-                        print("[Main] Mode is Manual")
                 else:
-                    # For raw messages -> most likely for  Straight / Reverse.
-                    commands = []
-                    if message[0] == "W".encode():
-                        commands = [self.calibration.STRAIGHT_F_I, self.calibration.STRAIGHT_F_P, message]
-                    else:
-                        commands = [self.calibration.STRAIGHT_R_I, self.calibration.STRAIGHT_R_P, message]
-                    
-                    for msg in commands:
-                        while self.stm_ready_to_recv.value != 1:
-                            continue
-                        self.stm_ready_to_recv.value = 0
-                        time.sleep(0.25)
-                        self.stm.send(msg)
-                self.stm_indv_move_done.value = 1  
+                    self.stm_ready_to_recv.value = 0
+                    self.stm.send(message)
 
             except Exception as error:
                 print('[Main] Process send_to_stm has failed')
@@ -509,7 +496,6 @@ class MultiProcessing:
         self.recv_from_stm_process.start()
         self.send_to_stm_process.start()
         self.stm_ready_to_recv.value = 1
-        self.stm_indv_move_done.value = 1
         print("[Main] STM Process has been Reconnected")
 
     """
@@ -525,7 +511,7 @@ class MultiProcessing:
             camera.iso = 700
             rawCapture = PiRGBArray(camera)
             # allow the camera to warmup
-            time.sleep(5)
+            time.sleep(0.2)
             # grab an image from the camera
             camera.capture(rawCapture, format=IMAGE_FORMAT)
             image = rawCapture.array
@@ -546,80 +532,121 @@ class MultiProcessing:
                     continue
                 
                 # Each image has 4 tries.
-                rebound = 0
-                image_message =  self.image_queue.get_nowait()
-                for cur_try in range(4):
+                no_of_tries = 0
+
+                while no_of_tries < 4:
                     start_time = datetime.now()
-                    print(f"[Main] Sending Image to Server -> Tries: {cur_try + 1}")
+                    image_message =  self.image_queue.get_nowait()
+                    print("[Main] Sending Image to Server.")
                     reply = image_sender.send_image(image_message[1], image_message[0]).decode(FORMAT)
                     print(f'[Main] Time taken to process image: {str(datetime.now() - start_time)} seconds')
-                    
-                    if reply == "NIL":
-                        # Move backwards command
-                        print('[Main] Failed to detect image, retrying now.')
-                        self.mode.value = 0
-                        self.stm_indv_move_done.value = 0
-                        self.to_stm_message_queue.put_nowait([COMMAND_LIST.B])
-
-                        # Stall until movement is done.
-                        while self.stm_indv_move_done.value != 1:
-                            continue
-                        
-                        # Retake image and repeat.
-                        rebound = cur_try + 1
-                        image = self.take_picture()
-                        image_message = [image, f"{self.image_count.value}"]
-
-                    else:
+                    # Image is detected -> Time to notify Android + recalibration.
+                    if reply != "NIL": 
                         image_id, distance = reply.split("/")
                         distance = float(distance)
                         print(f"[Main] Detected Image: {image_id}, Distance away: {distance}")
                         # Update Android with the image detected.
                         self.to_android_message_queue.put_nowait(AND_HEADER + RPI_HEADER + f"TARGET/{image_id}".encode(FORMAT))
+
+                        # Evaluate if exploration is done.
                         self.image_count.value -= 1
-                        # Exploration is done -> Thats the final picture.
+                        # Exploration is done.
                         if self.image_count.value == 0:
                             self.to_android_message_queue.put_nowait(AND_HEADER + RPI_HEADER + RPIToAndroid.FINISH_EXPLORE)
                             self.restart_explore()
                             break
-
-                        # Move forward to offset the difference.
+                            
                         if distance >= self.calibration.MINUS_UNIT:
                             # Move Forward with the distance.
-                            self.stm_indv_move_done.value = 0
-                            self.to_stm_message_queue.put_nowait(self.calibration.bundle_movement_raw(0, distance / 21))
+                            self.to_stm_message_queue.put_nowait(self.calibration.bundle_movement_raw(0, distance / 11))
 
                         # Stall until movement is done.
-                        while self.stm_indv_move_done.value != 1:
+                        while self.stm_ready_to_recv.value != 1:
                             continue
                         
+                        """
+                        # Calibrate check hoirzontal distance.
+                        image = self.take_picture()
+                        grid_offset = int(image_sender.send_image("calibrate", image).decode(FORMAT))
+                        
+                        print(f"[Main] Grid offset: {grid_offset}")
+                        
+                        # Check if it's intentional misaligned.
+                        #print(self.coord)
+                        #print(self.coord['obstacle'])
+                        #print(self.coord['obstacle'].split(b"-"))
+                        obstacle_x, obstacle_y = [int(x) for x in self.coord['obstacle'].split(b"-")]
+                        print(f"[Main] Current x:{obstacle_x} y:{obstacle_y}")
+                        perceived_x, perceived_y, perceived_angle = ast.literal_eval(self.coord['target'].decode(FORMAT))
+                        perceived_x, perceived_y, perceived_angle = int(perceived_x), int(perceived_y), int(perceived_angle)
+                        print(f"[Main] Percevied x:{perceived_x} y:{perceived_y}, angle:{perceived_angle}")
+                        """
+                        msg_to_send = RPIToAlgorithm.REQUEST_ROBOT_NEXT + RPIToAlgorithm.NIL
+                        """
+                        if perceived_angle == 0 or perceived_angle == 180:
+                            actual_x = int(obstacle_x - grid_offset) if perceived_angle == 0 else int(obstacle_x + grid_offset)
+                            # Not an intentional offset by Algorithm
+                            if actual_x != perceived_x:
+                                print(f"[Main] Not intentional offset by Algo actual x:{actual_x}, perceived x:{perceived_x}")
+                                msg_to_send = RPIToAlgorithm.REQUEST_ROBOT_NEXT + f"{actual_x},{perceived_y},{perceived_angle}".encode()
+
+                        else:
+                            actual_y = int(obstacle_y - grid_offset) if perceived_angle == 90 else int(obstacle_y + grid_offset)
+                            # Intentional offset by Algorithm
+                            if actual_y != perceived_y:
+                                print(f"[Main] Not intentional offset by Algo actual y:{actual_y}, perceived y:{perceived_y}")
+                                actual_coord = f"{perceived_x},{actual_y},{perceived_angle}".encode()
+                                msg_to_send = RPIToAlgorithm.REQUEST_ROBOT_NEXT + actual_coord
+                        """
                         # Request for next moveset from Algorithm
-                        self.to_algo_message_queue.put_nowait(RPI_HEADER + RPIToAlgorithm.REQUEST_ROBOT_NEXT + RPIToAlgorithm.NIL)
-                        rebound = 0
-                        self.mode.value = 1
+                        self.to_algo_message_queue.put_nowait(RPI_HEADER + msg_to_send)
+                        no_of_tries = 0
                         break
 
-                # Gives up on detecting image -> Forward again.
-                if rebound != 0:
-                    # Can't detect the final image -> Just stop.
-                    if self.image_count.value == 1:
-                        self.to_android_message_queue.put_nowait(AND_HEADER + RPI_HEADER + RPIToAndroid.FINISH_EXPLORE)
-                        self.restart_explore()
+                    no_of_tries += 1
+
+                    if no_of_tries >= 4:
+                        print("[Main] Exceeded retry amount -> time to move on.")
                         break
-                    # Time to move forward and request next step.
+                    
+                    # Move backwards command
+                    print('[Main] Failed to detect image, retrying now.')
                     self.mode.value = 0
-                    self.image_count.value -= 1
-                    self.stm_indv_move_done.value = 0
-                    self.to_stm_message_queue.put_nowait([COMMAND_LIST.F] * rebound)
+                    self.to_stm_message_queue.put_nowait([COMMAND_LIST.B])
+
                     # Stall until movement is done.
-                    while self.stm_indv_move_done.value != 1:
+                    while self.stm_ready_to_recv.value != 1:
                         continue
+                    
+                    # Retake image and repeat.
+                    image = self.take_picture()
+                    print('[Main] - RPI Picture Taken')
+                    self.image_queue.put_nowait([image, f"{self.image_count.value}"])
+
+                # Exceed number of tries -> Give up -> Move forward and request next set of movements.
+                if no_of_tries != 0:
+                    # Time to move forward and request next step.
                     self.mode.value = 1
+                    self.image_count.value -= 1
+                    self.to_stm_message_queue.put_nowait([COMMAND_LIST.F] * no_of_tries)
                     self.to_algo_message_queue.put_nowait(RPI_HEADER + RPIToAlgorithm.REQUEST_ROBOT_NEXT + RPIToAlgorithm.NIL)
-       
+                    #self.to_algo_message_queue.put_nowait(RPI_HEADER + RPIToAlgorithm.REQUEST_ROBOT_NEXT)
+
             except Exception as error:
                 print('[Main] Error - Image processing failed')
                 self.error_message(error)
+
+    def recv_from_ultrasonic(self):
+        while True:
+            try:
+                distance = self.ultrasonic.distance()
+                if distance < 20:
+                    self.to_stm_message_queue.put_nowait("D|{distance}")
+                    print("[Main] Ultrasonic detected that it's very near an obstacle.")
+                time.sleep(1)
+            except Exception as error:
+                print('[Main] Error - Ultrasonic read error')
+                raise error
                     
     def error_message(self, message : str) -> None:
         print(f"[Error Message]: {message}")

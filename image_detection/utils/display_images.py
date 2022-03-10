@@ -25,6 +25,9 @@ def create_results(dir_path):
         image_count += 1
 
     each_row_count = math.ceil(image_count/2)
+    
+    if image_count == 0:
+        return
 
     # get first row first image
     first_file_name = files[0]
