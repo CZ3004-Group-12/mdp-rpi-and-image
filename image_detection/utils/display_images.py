@@ -1,4 +1,4 @@
-import os
+import os, shutil
 import tkinter as tk 
 import math
 import numpy as np 
@@ -14,7 +14,7 @@ def create_results(dir_path):
         os.makedirs(directory_images_final)
 
     # get detected images path
-    detect_path = f"{dir_path}/images_detected/"
+    detect_path = f"{dir_path}/images_detected"
 
     # Removes .DS_STORE by macos
     files = [f for f in os.listdir(detect_path) if not f.startswith('.')]
@@ -39,6 +39,7 @@ def create_results(dir_path):
 
     vis_row_2 = cv2.imread(f"{detect_path}/{second_file_name}")
     vis_row_2 = cv2.resize(vis_row_2, (width, height))
+    
 
     # stitch other images in rows
     for idx, file in enumerate(files):
@@ -48,7 +49,6 @@ def create_results(dir_path):
                 add_img = cv2.resize(add_img, (width, height))
                 vis_row_1 = np.concatenate((vis_row_1, add_img), axis=1)
                 cv2.imwrite(f"{dir_path}/final/out_row_1.jpg", vis_row_1)
-                
             else:
                 if idx != each_row_count:
                     add_img = cv2.imread(f"{detect_path}/{file}")
@@ -56,6 +56,8 @@ def create_results(dir_path):
                     vis_row_2 = np.concatenate((vis_row_2, add_img), axis=1)
                     cv2.imwrite(f"{dir_path}/final/out_row_2.jpg", vis_row_2)
 
+    cv2.imwrite(f"{dir_path}/final/out_row_1.jpg", vis_row_1)
+    cv2.imwrite(f"{dir_path}/final/out_row_2.jpg", vis_row_2)
     # if odd number, means need to pad bottom image
     if image_count != (each_row_count*2):
         btm_img = cv2.imread(f"{dir_path}/final/out_row_2.jpg")
@@ -69,7 +71,18 @@ def create_results(dir_path):
     final_img = np.concatenate((top_img, btm_img), axis=0)
     cv2.imwrite(f"{dir_path}/final/final_out.jpg", final_img)
 
-    
+def delete_files(dir_path):
+    directory_images = os.path.join(dir_path, "images_detected")
+    for filename in os.listdir(directory_images):
+        file_path = os.path.join(directory_images, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print('Failed to delete %s. Reason: %s' % (file_path, e))    
+
 def get_results(dir_path):
     root = tk.Tk()
     
@@ -79,6 +92,9 @@ def get_results(dir_path):
     display_img = ImageTk.PhotoImage(Image.open(f"{dir_path}/final/final_out.jpg"))
     panel = tk.Label(root, image = display_img)
     panel.pack(side="bottom", fill="both", expand="yes")
+
+    # delete files
+    delete_files(dir_path)
 
     root.mainloop()
 

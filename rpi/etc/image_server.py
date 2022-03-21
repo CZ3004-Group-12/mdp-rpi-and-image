@@ -31,7 +31,7 @@ class ImageProcessingServer:
         # file_helper.ModelDownload(self.ckpt_path)
         # initialize inference class
         self.inf = inference.Inference(self.ckpt_path)
-        self.prev = 0
+        # self.prev = 0
         
     def start(self):
         # keep track of recognized ids
@@ -60,9 +60,11 @@ class ImageProcessingServer:
                     os.makedirs(directory_images)
 
                 # delete files if new run
-                if rpi_reply != "calibrate":
-                    if self.prev < rpi_reply:
-                        self.delete_files(self.dir_path)
+                # if rpi_reply != "calibrate":
+                #     if self.prev < int(rpi_reply):
+                #         self.delete_files(self.dir_path)
+                #     else:
+                #         self.prev = int(rpi_reply)
                 # save raw image
                 cv2.imwrite(raw_image_path, frame)
 
@@ -117,17 +119,7 @@ class ImageProcessingServer:
         # send_reply disconnects the connection
         print('[Image Server] Sent reply and disconnected at time: ' + str(datetime.now()) + '\n')
 
-    def delete_files(self, dir_path):
-        directory_images = os.path.join(self.dir_path, "images_detected")
-        for filename in os.listdir(directory_images):
-            file_path = os.path.join(directory_images, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
+    
 
 # Standalone testing.
 if __name__ == '__main__':

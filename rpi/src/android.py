@@ -1,17 +1,8 @@
-'''
-Rapsberry Pi serves as socket server, N7 will need a client socket script
-as well to establish connection. Should be able to send and receive messages
-via the server/client.
-'''
-
 # Bluetooth Status
 import os
 from bluetooth import *
 from misc.status import *
 from misc.config import ANDROID_SOCKET_BUFFER_SIZE, UUID
-
-# UUID = "94f39d29-7d6d-437d-973b-fba39e49d4ee"
-# 00001108-0000-1000-8000-00805f9b34fb
 
 class Android:
     def __init__(self) -> None:
@@ -68,29 +59,27 @@ class Android:
         self.disconnect_client()
         self.disconnect_server()
 
+    # Receive from Android Interface
     def recv(self) -> None:
         try:
             message = self.client_socket.recv(ANDROID_SOCKET_BUFFER_SIZE).strip()
-            # print(f'[Android] [FROM ANDROID] {message}')
             if message is None:
                 return None
             if len(message) > 0:
                 return message
             return None
-            
         except Exception as error:
             print(f"[Android] Fail to recieve message from Android {str(error)}")
             raise error
-      
+    
+    # Send To Android Interface
     def send(self, message) -> None:
         try:
             print(f'[Android] Message to Android: {message}')
             self.client_socket.send(message)
-
         except Exception as error:	
             print(f"[Android] Fail to send {str(error)}")
             raise error
-
 
 # Standalone testing.
 if __name__ == '__main__':

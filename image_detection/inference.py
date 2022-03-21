@@ -4,7 +4,7 @@ import cv2
 import time
 
 # from image_detection.config.config import IMAGE_IDS
-from .config.config import IMAGE_IDS
+from config.config import IMAGE_IDS
 
 class Inference:
     '''
@@ -130,9 +130,10 @@ if __name__ == "__main__":
     # start inference
     start_time = time.time()
     
-    inf = Inference("best_ckpt.pt")
-    img_path = "test_images/img_76_0_first_bg.jpg"
-    label, cord_thres = inf.run_inference(img_path, []) 
+    inf = Inference("checkpoint/best_ckpt.pt")
+    img_path = "utils/images/img_100_0_first_bg.jpg"
+    ids = [] 
+    label, cord_thres, x_shape, y_shape, bbox = inf.run_inference(img_path, ids) 
 
     # read image
     img_taken = cv2.imread(img_path)
@@ -148,8 +149,8 @@ if __name__ == "__main__":
     print(f"Y1: {y1}, Y2: {y2}")
 
     # draw bounding box
-    # if label != "-1":
-    #     inf.draw_bounding(label, cord_thres, img_path)
+    if label != "-1":
+        inf.draw_bounding(label, cord_thres, img_path, "utils")
 
     end_time = time.time()
     

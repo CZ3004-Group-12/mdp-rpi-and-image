@@ -4,7 +4,7 @@ import cv2
 import time
 import imagezmq
 from datetime import datetime
-from multiprocessing import Process, Value, Manager
+from multiprocessing import Process, Value, Manager, Queue
 
 # Camera modules
 from picamera import PiCamera
@@ -46,7 +46,7 @@ class MultiProcessing:
         if stm_on:
             print("[Main] Running with STM interface.") 
             self.stm = STM(env=env)
-            self.to_stm_message_queue = self.manager.Queue()
+            self.to_stm_message_queue = Queue()
             self.recv_from_stm_process = Process(target=self.recv_from_stm, name="[STM Recv Process]")
             self.send_to_stm_process = Process(target=self.send_to_stm, name = "[STM Send Process]")
         
@@ -54,7 +54,7 @@ class MultiProcessing:
         if android_on:
             print("[Main] Running with Android interface.")  
             self.android = Android()
-            self.to_android_message_queue = self.manager.Queue()
+            self.to_android_message_queue = Queue()
             self.recv_from_android_process = Process(target=self.recv_from_android, name="[Android Recv Process]")
             self.send_to_android_process = Process(target=self.send_to_android, name="[Android Send Process]")
 
@@ -62,14 +62,14 @@ class MultiProcessing:
         if algo_on: 
             print("[Main] Running with Algorithm interface.") 
             self.algorithm = Algorithm()
-            self.to_algo_message_queue = self.manager.Queue()
+            self.to_algo_message_queue = Queue()
             self.recv_from_algorithm_process = Process(target=self.recv_from_algorithm, name="[Algorithm Recv Process]")
             self.send_to_algorithm_process = Process(target=self.send_to_algorithm, name="[Algorithm Send Process]")
 
         # Image Processing
         if image_processing_server is not None:
             print("[Main] Running with Image Processing.")
-            self.image_queue = self.manager.Queue()
+            self.image_queue = Queue()
             self.image_processing_server = image_processing_server 
             self.image_process = Process(target=self.image_processing, name="[Image Process]")
 
@@ -83,16 +83,17 @@ class MultiProcessing:
                 self.recv_from_stm_process.start()
             
             # Algorithm Instance
+            # Android Instance
+            if self.android is not None:
+                self.android.connect()
+                # self.send_to_android_process.start()
+                self.recv_from_android_process.start()
+
             if self.algorithm is not None:
                 self.algorithm.connect()
                 self.send_to_algorithm_process.start()
                 self.recv_from_algorithm_process.start()
 
-            # Android Instance
-            if self.android is not None:
-                self.android.connect() 
-                self.send_to_android_process.start()
-                self.recv_from_android_process.start()
 
             # Image Processing.
             if self.image_processing_server is not None:
@@ -148,6 +149,8 @@ class MultiProcessing:
         while True:
             try:
                 # Check STM connection
+                pass 
+                """
                 if self.stm is not None and (not self.recv_from_stm_process.is_alive() or not self.send_to_stm_process.is_alive()):
                    self.reconnect_stm()
                 # Check -> Android connection
@@ -160,7 +163,7 @@ class MultiProcessing:
                    self.image_process.terminate()
                    self.image_process = Process(target=self.image_processing, name="[Image Process]")
                    self.image_process.start()
-                    
+                """
             except Exception as error:
                 print("[Main] Error during reconnection: ",error)
                 raise error
@@ -456,8 +459,8 @@ class MultiProcessing:
                             time.sleep(0.25)
                             self.stm.send(command[i])
                         # Stall until STM completes the last movement.
-                        #while self.stm_ready_to_recv.value != 1:
-                        #    continue
+                        while self.stm_ready_to_recv.value != 1:
+                            continue
                             
                         print("[Main] STM Completed one move.")
 
@@ -525,7 +528,7 @@ class MultiProcessing:
             camera.iso = 700
             rawCapture = PiRGBArray(camera)
             # allow the camera to warmup
-            time.sleep(5)
+            time.sleep(0.2)
             # grab an image from the camera
             camera.capture(rawCapture, format=IMAGE_FORMAT)
             image = rawCapture.array

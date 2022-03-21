@@ -12,6 +12,7 @@ class STM:
         self.baud_rate = baud_rate
         self.serial_port = serial_port[self.flip]
 
+    # Establish connection with STM Board
     def connect(self) -> None:
         retry = True
         while retry:
@@ -20,9 +21,9 @@ class STM:
                 self.stm = serial.Serial(port=self.serial_port, baudrate=self.baud_rate, timeout=None)
                 if self.stm is not None:
                     print(f"[STM] Established connection on Serial Port: {self.serial_port} Baud Rate: {self.baud_rate}")
-                    if self.env == 'g-outdoor':
-                        self.send(b'G0108x0100')
-                        self.recv()
+                    #if self.env == 'g-outdoor':
+                        #self.send(b'G0104x0100')
+                        #self.recv()
                     retry = False
             except IOError as error:
                 print(f"[Error] Failed to establish STM Connection: {str(error)}")

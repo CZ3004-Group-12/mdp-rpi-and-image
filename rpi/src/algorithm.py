@@ -1,16 +1,5 @@
-'''
-Rapsberry Pi serves as socket server, Algorithm will need a client socket script
-as well to establish connection. Should be able to send and receive messages
-via the server/client.
-'''
-
 import socket
 from misc.config import ALGO_SOCKET_BUFFER_SIZE, WIFI_IP, PORT, FORMAT
-
-# FORMAT = "UTF-8"
-# ALGO_SOCKET_BUFFER_SIZE = 1024
-# WIFI_IP = "192.168.68.110"
-# PORT = 5050
 
 class Algorithm:
     def __init__(self, host=WIFI_IP, port=PORT):
@@ -28,23 +17,22 @@ class Algorithm:
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen()
         print(f"[Algo] Server Address at: {self.host}:{self.port}")
-
+    
+    # Set-up connection for Algo client.
     def connect(self):
         while True:
             try:
                 print(f'[Algo] Accepting Connection to: {self.host}:{self.port}]')
                 if self.client_socket is None:
                     self.client_socket, self.address = self.server_socket.accept()
-                    print(f'[Algo] Connected to Algoritmh Server at {self.host}:{self.port}')
+                    print(f'[Algo] Connected to Algo Server at {self.host}:{self.port}')
                     break
-
             except Exception as error:
                 print(f'[Algo] Failed to setup connection for Algorithm Server at {self.host}:{self.port}')
                 self.error_message(error)
                 if self.client_socket is not None:
                     self.client_socket.close()
                     self.client_socket = None
-            
             print(f'[Algo] Retrying for a connection to {self.host}:{self.port}')
 
     def disconnect(self):
@@ -63,13 +51,10 @@ class Algorithm:
             if self.client_socket is not None:
                 self.client_socket.close()
                 self.client_socket = None
-
             if self.server_socket is not None:
                 self.server_socket.close()
                 self.server_socket = None
-
             print(f'[Algo] Disconnected Algorithm sockets')
-
         except Exception as error:
             print(f'[Algo] Failed to disconnect Algorithm sockets')
             self.error_message(error)
@@ -81,7 +66,6 @@ class Algorithm:
                 # print(f'[Algo] Receive Message from Algo Client: {message}')
                 return message
             return None
-
         except Exception as error:
             print("[Algo] Failed to receive message from Algo Client.")
             self.error_message(error)
